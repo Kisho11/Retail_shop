@@ -1,35 +1,42 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
-import products from '../data/products';  // Import shared data
+import products from '../data/products';
 import ProductCard from '../components/ProductCard';
 
 function ProductsByIndustry() {
-  const { industry } = useParams();  // e.g., 'tech-shops'
-  const formattedIndustry = industry ? industry.replace('-', ' ') : null;
+  const { industry } = useParams();
+  const formattedIndustry = industry ? decodeURIComponent(industry).replace(/-/g, ' ') : null;
 
-  // Filter products by industry
   const filteredProducts = formattedIndustry
-    ? products.filter(p => p.industries.some(ind => ind.toLowerCase() === formattedIndustry.toLowerCase()))
-    : products;  // Show all if no specific industry
+    ? products.filter((p) =>
+        p.industries?.some((ind) => ind.toLowerCase() === formattedIndustry.toLowerCase())
+      )
+    : products;
 
   return (
-    <div className="container mx-auto py-8">
-      <h1 className="text-4xl font-bold text-primary mb-4">Products by Industry</h1>
-      {formattedIndustry ? (
-        <p className="text-gray-700 mb-8">Showing products tailored for: {formattedIndustry}</p>
-      ) : (
-        <p className="text-gray-700 mb-8">Browse products by specific industries using the menu.</p>
-      )}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredProducts.length > 0 ? (
-          filteredProducts.map(product => (
-            <ProductCard key={product.id} product={product} />
-          ))
+    <section className="shell py-10">
+      <div className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
+        <p className="text-xs font-bold uppercase tracking-[0.14em] text-blue-700">Industry catalog</p>
+        <h1 className="mt-2 text-3xl font-bold text-slate-900 sm:text-4xl">Products by Industry</h1>
+        {formattedIndustry ? (
+          <p className="mt-3 text-slate-600">Showing products for <span className="font-semibold text-slate-900">{formattedIndustry}</span>.</p>
         ) : (
-          <p className="text-gray-700">No products found for this industry.</p>
+          <p className="mt-3 text-slate-600">Select an industry from navigation to narrow product recommendations.</p>
         )}
       </div>
-    </div>
+
+      {filteredProducts.length > 0 ? (
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+          {filteredProducts.map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-600">
+          No products found for this industry yet.
+        </div>
+      )}
+    </section>
   );
 }
 

@@ -1,10 +1,10 @@
 module.exports = {
-  content: ["./src/**/*.{js,jsx,ts,tsx}"],
+  content: ['./src/**/*.{js,jsx,ts,tsx}'],
   theme: {
     extend: {
       colors: {
-        primary: '#000000',  // Black
-        accent: '#FF0000',   // Red
+        primary: '#0f172a',
+        accent: '#0b6cfb',
       },
     },
   },
