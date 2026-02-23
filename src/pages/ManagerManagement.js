@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import UiIcon from '../components/UiIcon';
 
 function ManagerManagement() {
   const { managers, addManager, updateManager, deleteManager } = useAuth();
@@ -95,11 +96,14 @@ function ManagerManagement() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-2xl font-bold text-primary">👨‍💼 Manager Management</h3>
+        <h3 className="flex items-center gap-2 text-2xl font-bold text-primary">
+          <UiIcon name="userCog" className="h-6 w-6" />
+          Manager Management
+        </h3>
         {!showAddForm && (
           <button
             onClick={() => setShowAddForm(true)}
-            className="bg-primary text-white px-6 py-3 rounded-lg font-bold hover:bg-blue-800 transition"
+            className="bg-primary text-white px-6 py-3 rounded-lg font-bold hover:bg-red-800 transition"
           >
             + Add New Manager
           </button>
@@ -114,14 +118,16 @@ function ManagerManagement() {
           </h4>
 
           {error && (
-            <div className="bg-blue-50 border-2 border-blue-500 text-blue-700 p-4 rounded-lg mb-6">
-              ⚠️ {error}
+            <div className="bg-blue-50 border-2 border-blue-500 text-blue-700 p-4 rounded-lg mb-6 inline-flex items-center gap-2">
+              <UiIcon name="alert" className="h-5 w-5" />
+              {error}
             </div>
           )}
 
           {success && (
-            <div className="bg-green-50 border-2 border-green-500 text-green-700 p-4 rounded-lg mb-6">
-              ✓ {success}
+            <div className="bg-green-50 border-2 border-green-500 text-green-700 p-4 rounded-lg mb-6 inline-flex items-center gap-2">
+              <UiIcon name="check" className="h-5 w-5" />
+              {success}
             </div>
           )}
 
@@ -167,7 +173,7 @@ function ManagerManagement() {
 
             <div className="bg-blue-50 border-l-4 border-primary p-4 rounded">
               <p className="text-sm text-gray-700">
-                <strong>📝 Note:</strong> New managers will need to use their email as username at login. 
+                <strong>Note:</strong> New managers will need to use their email as username at login.
                 They can change their password after first login.
               </p>
             </div>
@@ -176,9 +182,12 @@ function ManagerManagement() {
             <div className="flex gap-4 pt-4 border-t-2 border-gray-200">
               <button
                 type="submit"
-                className="flex-1 bg-primary text-white py-3 rounded-lg font-bold hover:bg-blue-800 transition"
+                className="flex-1 bg-primary text-white py-3 rounded-lg font-bold hover:bg-red-800 transition"
               >
-                {editingId ? '💾 Update Manager' : '✓ Add Manager'}
+                <span className="inline-flex items-center gap-2">
+                  <UiIcon name={editingId ? 'save' : 'check'} className="h-4 w-4" />
+                  {editingId ? 'Update Manager' : 'Add Manager'}
+                </span>
               </button>
               <button
                 type="button"
@@ -239,13 +248,19 @@ function ManagerManagement() {
                         onClick={() => handleEdit(manager)}
                         className="text-blue-600 hover:text-blue-800 font-semibold text-sm"
                       >
-                        ✎ Edit
+                        <span className="inline-flex items-center gap-1">
+                          <UiIcon name="edit" className="h-4 w-4" />
+                          Edit
+                        </span>
                       </button>
                       <button
                         onClick={() => handleDelete(manager.id)}
                         className="text-blue-600 hover:text-blue-800 font-semibold text-sm"
                       >
-                        🗑️ Delete
+                        <span className="inline-flex items-center gap-1">
+                          <UiIcon name="trash" className="h-4 w-4" />
+                          Delete
+                        </span>
                       </button>
                     </td>
                   </tr>
@@ -258,7 +273,10 @@ function ManagerManagement() {
 
       {/* Demo Credentials Info */}
       <div className="bg-amber-50 border-2 border-amber-300 rounded-xl p-6">
-        <h4 className="text-lg font-bold text-amber-900 mb-3">ℹ️ Manager Access Information</h4>
+        <h4 className="mb-3 flex items-center gap-2 text-lg font-bold text-amber-900">
+          <UiIcon name="info" className="h-5 w-5" />
+          Manager Access Information
+        </h4>
         <div className="space-y-2 text-sm text-amber-900">
           <p><strong>Existing Test Manager:</strong> manager@elamshelf.com / manager123</p>
           <p><strong>For New Managers:</strong> Email address becomes their login username. They should reset their password on first login.</p>

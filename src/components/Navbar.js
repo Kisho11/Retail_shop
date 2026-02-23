@@ -65,6 +65,9 @@ function Navbar() {
             </Link>
           </div>
         </div>
+        <div className="bg-red-700/90 px-3 py-2 text-center text-xs font-bold uppercase tracking-[0.08em] sm:text-sm">
+          <p className="blink-banner-text">SAME DAY PICK UP | DELIVERY WITHIN 1 - 3 WORKING DAYS | GET A QUOTE</p>
+        </div>
       </div>
       <div className="shell">
         <div className="flex h-16 items-center justify-between">
@@ -118,7 +121,7 @@ function Navbar() {
                 </Link>
                 <Link
                   to="/signup"
-                  className="rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-500"
+                  className="rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-600"
                 >
                   Sign Up
                 </Link>
@@ -132,7 +135,7 @@ function Navbar() {
                 {user?.role === 'customer' ? (
                   <Link
                     to="/customer-portal"
-                    className="rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-500"
+                    className="rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-600"
                   >
                     My Account
                   </Link>
@@ -154,7 +157,15 @@ function Navbar() {
               </>
             )}
 
-            <Link to="/cart" className="relative rounded-full bg-slate-100 px-4 py-2 text-sm font-bold text-slate-800 transition hover:bg-slate-200">
+            <Link
+              to="/cart"
+              className="relative inline-flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-sm font-bold text-slate-800 transition hover:bg-slate-200"
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                <circle cx="9" cy="20" r="1.5" />
+                <circle cx="17" cy="20" r="1.5" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h2l2.2 10.2a1 1 0 0 0 1 .8h8.9a1 1 0 0 0 1-.8L20 8H7" />
+              </svg>
               Cart
               {getTotalItems() > 0 && (
                 <span className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-[11px] font-bold text-white">
@@ -257,9 +268,14 @@ function Navbar() {
             <div className="pt-1">
               <Link
                 to="/cart"
-                className="block rounded-lg border border-slate-300 px-3 py-2 text-center text-sm font-semibold text-slate-700"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-center text-sm font-semibold text-slate-700"
                 onClick={handleNavigate}
               >
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <circle cx="9" cy="20" r="1.5" />
+                  <circle cx="17" cy="20" r="1.5" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h2l2.2 10.2a1 1 0 0 0 1 .8h8.9a1 1 0 0 0 1-.8L20 8H7" />
+                </svg>
                 Cart ({getTotalItems()})
               </Link>
             </div>

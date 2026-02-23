@@ -1,35 +1,37 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useCart } from '../context/CartContext';
+import { useOrders } from '../context/OrderContext';
 import products from '../data/products';
 import ProductManagement from './ProductManagement';
 import CategoryManagement from './CategoryManagement';
 import ManagerManagement from './ManagerManagement';
+import OrderDetailsModal from '../components/OrderDetailsModal';
+import UiIcon from '../components/UiIcon';
 
 function AdminDashboard() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { cartItems } = useCart();
+  const { orders } = useOrders();
   const [activeTab, setActiveTab] = useState('overview');
+  const [selectedOrder, setSelectedOrder] = useState(null);
+
+  const sortedOrders = [...orders].sort(
+    (a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date)
+  );
+  const recentOrders = sortedOrders.slice(0, 5);
+  const totalRevenue = orders.reduce((sum, order) => sum + (Number(order.amount) || 0), 0);
+  const pendingOrders = orders.filter((order) => order.status === 'Pending').length;
 
   // Mock data for statistics
   const stats = {
     totalProducts: products.length,
-    totalOrders: 1250,
-    totalRevenue: 125000,
+    totalOrders: orders.length,
+    totalRevenue,
     totalCustomers: 856,
-    pendingOrders: 24,
+    pendingOrders,
     lowStockProducts: 8,
   };
-
-  const recentOrders = [
-    { id: 1001, customer: 'John Smith', amount: 450.00, status: 'Shipped', date: '2026-02-22' },
-    { id: 1002, customer: 'Emma Wilson', amount: 320.50, status: 'Processing', date: '2026-02-22' },
-    { id: 1003, customer: 'Mike Johnson', amount: 890.00, status: 'Delivered', date: '2026-02-21' },
-    { id: 1004, customer: 'Sarah Davis', amount: 220.75, status: 'Pending', date: '2026-02-21' },
-    { id: 1005, customer: 'Tom Brown', amount: 1500.00, status: 'Shipped', date: '2026-02-20' },
-  ];
 
   const handleLogout = () => {
     logout();
@@ -41,7 +43,10 @@ function AdminDashboard() {
       {/* Navbar */}
       <nav className="bg-gradient-to-r from-primary to-black text-white p-4 shadow-lg">
         <div className="container mx-auto flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-accent">👨‍💼 Admin Dashboard</h1>
+          <h1 className="flex items-center gap-2 text-3xl font-bold text-accent">
+            <UiIcon name="userShield" className="h-8 w-8" />
+            Admin Dashboard
+          </h1>
           <div className="flex items-center gap-6">
             <div className="text-right">
               <p className="text-sm text-blue-100">Logged in as</p>
@@ -49,7 +54,7 @@ function AdminDashboard() {
             </div>
             <button
               onClick={handleLogout}
-              className="bg-blue-500 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition"
+              className="bg-blue-500 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-semibold transition"
             >
               Logout
             </button>
@@ -86,7 +91,7 @@ function AdminDashboard() {
                     <p className="text-gray-600 text-sm">Total Products</p>
                     <p className="text-4xl font-bold text-primary mt-2">{stats.totalProducts}</p>
                   </div>
-                  <span className="text-4xl">📦</span>
+                  <UiIcon name="box" className="h-10 w-10 text-primary" />
                 </div>
               </div>
 
@@ -96,7 +101,7 @@ function AdminDashboard() {
                     <p className="text-gray-600 text-sm">Total Revenue</p>
                     <p className="text-4xl font-bold text-green-700 mt-2">${stats.totalRevenue.toLocaleString()}</p>
                   </div>
-                  <span className="text-4xl">💰</span>
+                  <UiIcon name="currency" className="h-10 w-10 text-green-700" />
                 </div>
               </div>
 
@@ -106,7 +111,7 @@ function AdminDashboard() {
                     <p className="text-gray-600 text-sm">Total Orders</p>
                     <p className="text-4xl font-bold text-purple-700 mt-2">{stats.totalOrders}</p>
                   </div>
-                  <span className="text-4xl">📋</span>
+                  <UiIcon name="list" className="h-10 w-10 text-purple-700" />
                 </div>
               </div>
 
@@ -116,7 +121,7 @@ function AdminDashboard() {
                     <p className="text-gray-600 text-sm">Total Customers</p>
                     <p className="text-4xl font-bold text-orange-700 mt-2">{stats.totalCustomers}</p>
                   </div>
-                  <span className="text-4xl">👥</span>
+                  <UiIcon name="users" className="h-10 w-10 text-orange-700" />
                 </div>
               </div>
 
@@ -126,7 +131,7 @@ function AdminDashboard() {
                     <p className="text-gray-600 text-sm">Pending Orders</p>
                     <p className="text-4xl font-bold text-blue-700 mt-2">{stats.pendingOrders}</p>
                   </div>
-                  <span className="text-4xl">⏳</span>
+                  <UiIcon name="clock" className="h-10 w-10 text-blue-700" />
                 </div>
               </div>
 
@@ -136,14 +141,17 @@ function AdminDashboard() {
                     <p className="text-gray-600 text-sm">Low Stock Items</p>
                     <p className="text-4xl font-bold text-yellow-700 mt-2">{stats.lowStockProducts}</p>
                   </div>
-                  <span className="text-4xl">⚠️</span>
+                  <UiIcon name="alert" className="h-10 w-10 text-yellow-700" />
                 </div>
               </div>
             </div>
 
             {/* Recent Orders */}
             <div className="bg-white rounded-xl shadow-md p-6">
-              <h3 className="text-2xl font-bold text-primary mb-6">📊 Recent Orders</h3>
+              <h3 className="mb-6 flex items-center gap-2 text-2xl font-bold text-primary">
+                <UiIcon name="list" className="h-6 w-6" />
+                Recent Orders
+              </h3>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-100">
@@ -199,7 +207,10 @@ function AdminDashboard() {
         {/* Orders Tab */}
         {activeTab === 'orders' && (
           <div className="bg-white rounded-xl shadow-md p-6">
-            <h3 className="text-2xl font-bold text-primary mb-6">📋 All Orders</h3>
+            <h3 className="mb-6 flex items-center gap-2 text-2xl font-bold text-primary">
+              <UiIcon name="list" className="h-6 w-6" />
+              All Orders
+            </h3>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-100">
@@ -213,7 +224,7 @@ function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {recentOrders.map((order) => (
+                  {sortedOrders.map((order) => (
                     <tr key={order.id} className="border-b border-gray-200 hover:bg-gray-50">
                       <td className="px-6 py-4 font-bold text-primary">#{order.id}</td>
                       <td className="px-6 py-4">{order.customer}</td>
@@ -230,7 +241,12 @@ function AdminDashboard() {
                       </td>
                       <td className="px-6 py-4 text-gray-600">{order.date}</td>
                       <td className="px-6 py-4">
-                        <button className="text-blue-600 hover:text-blue-800 font-semibold">View</button>
+                        <button
+                          onClick={() => setSelectedOrder(order)}
+                          className="text-blue-600 hover:text-blue-800 font-semibold"
+                        >
+                          View
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -243,7 +259,10 @@ function AdminDashboard() {
         {/* Customers Tab */}
         {activeTab === 'customers' && (
           <div className="bg-white rounded-xl shadow-md p-6">
-            <h3 className="text-2xl font-bold text-primary mb-6">👥 Customers</h3>
+            <h3 className="mb-6 flex items-center gap-2 text-2xl font-bold text-primary">
+              <UiIcon name="users" className="h-6 w-6" />
+              Customers
+            </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {[1, 2, 3, 4, 5, 6].map((i) => (
                 <div key={i} className="border-2 border-gray-200 rounded-lg p-6 hover:shadow-lg transition">
@@ -268,7 +287,10 @@ function AdminDashboard() {
         {/* Reports Tab */}
         {activeTab === 'reports' && (
           <div className="bg-white rounded-xl shadow-md p-6">
-            <h3 className="text-2xl font-bold text-primary mb-6">📈 Reports & Analytics</h3>
+            <h3 className="mb-6 flex items-center gap-2 text-2xl font-bold text-primary">
+              <UiIcon name="chart" className="h-6 w-6" />
+              Reports & Analytics
+            </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="border-2 border-gray-200 rounded-lg p-6">
                 <h4 className="font-bold text-lg text-gray-800 mb-4">Sales This Month</h4>
@@ -314,6 +336,8 @@ function AdminDashboard() {
             </div>
           </div>
         )}
+
+        <OrderDetailsModal order={selectedOrder} onClose={() => setSelectedOrder(null)} accentClass="text-primary" />
       </div>
     </div>
   );

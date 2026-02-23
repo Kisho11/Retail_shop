@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useProducts } from '../context/ProductContext';
+import UiIcon from '../components/UiIcon';
 
 function ProductManagement() {
   const { products, categoryNames, addProduct, updateProduct, deleteProduct } = useProducts();
@@ -103,11 +104,14 @@ function ProductManagement() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-2xl font-bold text-primary">📦 Product Management</h3>
+        <h3 className="flex items-center gap-2 text-2xl font-bold text-primary">
+          <UiIcon name="box" className="h-6 w-6" />
+          Product Management
+        </h3>
         {!showAddForm && (
           <button
             onClick={() => setShowAddForm(true)}
-            className="bg-primary text-white px-6 py-3 rounded-lg font-bold hover:bg-blue-800 transition"
+            className="bg-primary text-white px-6 py-3 rounded-lg font-bold hover:bg-red-800 transition"
           >
             + Add New Product
           </button>
@@ -122,14 +126,16 @@ function ProductManagement() {
           </h4>
 
           {error && (
-            <div className="bg-blue-50 border-2 border-blue-500 text-blue-700 p-4 rounded-lg mb-6">
-              ⚠️ {error}
+            <div className="bg-blue-50 border-2 border-blue-500 text-blue-700 p-4 rounded-lg mb-6 inline-flex items-center gap-2">
+              <UiIcon name="alert" className="h-5 w-5" />
+              {error}
             </div>
           )}
 
           {success && (
-            <div className="bg-green-50 border-2 border-green-500 text-green-700 p-4 rounded-lg mb-6">
-              ✓ {success}
+            <div className="bg-green-50 border-2 border-green-500 text-green-700 p-4 rounded-lg mb-6 inline-flex items-center gap-2">
+              <UiIcon name="check" className="h-5 w-5" />
+              {success}
             </div>
           )}
 
@@ -239,9 +245,12 @@ function ProductManagement() {
             <div className="flex gap-4 pt-4 border-t-2 border-gray-200">
               <button
                 type="submit"
-                className="flex-1 bg-primary text-white py-3 rounded-lg font-bold hover:bg-blue-800 transition"
+                className="flex-1 bg-primary text-white py-3 rounded-lg font-bold hover:bg-red-800 transition"
               >
-                {editingId ? '💾 Update Product' : '✓ Add Product'}
+                <span className="inline-flex items-center gap-2">
+                  <UiIcon name={editingId ? 'save' : 'check'} className="h-4 w-4" />
+                  {editingId ? 'Update Product' : 'Add Product'}
+                </span>
               </button>
               <button
                 type="button"
@@ -267,6 +276,7 @@ function ProductManagement() {
               <tr>
                 <th className="px-6 py-3 text-left font-semibold text-gray-700">Name</th>
                 <th className="px-6 py-3 text-left font-semibold text-gray-700">Price</th>
+                <th className="px-6 py-3 text-left font-semibold text-gray-700">Stock</th>
                 <th className="px-6 py-3 text-left font-semibold text-gray-700">Categories</th>
                 <th className="px-6 py-3 text-left font-semibold text-gray-700">Status</th>
                 <th className="px-6 py-3 text-left font-semibold text-gray-700">Actions</th>
@@ -283,6 +293,12 @@ function ProductManagement() {
                     )}
                   </td>
                   <td className="px-6 py-4">
+                    <p className="font-bold text-gray-800">{product.inventory?.onHand ?? 0}</p>
+                    <p className="text-xs text-gray-500">
+                      Avl: {Math.max((product.inventory?.onHand ?? 0) - (product.inventory?.reserved ?? 0), 0)}
+                    </p>
+                  </td>
+                  <td className="px-6 py-4">
                     <div className="flex flex-wrap gap-1">
                       {product.categories.slice(0, 2).map((cat) => (
                         <span key={cat} className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
@@ -295,22 +311,38 @@ function ProductManagement() {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-semibold">
-                      Active
-                    </span>
+                    {Math.max((product.inventory?.onHand ?? 0) - (product.inventory?.reserved ?? 0), 0) <= 0 ? (
+                      <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-semibold">
+                        Out of Stock
+                      </span>
+                    ) : Math.max((product.inventory?.onHand ?? 0) - (product.inventory?.reserved ?? 0), 0) <= (product.inventory?.reorderLevel ?? 0) ? (
+                      <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-semibold">
+                        Low Stock
+                      </span>
+                    ) : (
+                      <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-semibold">
+                        Healthy
+                      </span>
+                    )}
                   </td>
                   <td className="px-6 py-4 space-x-2">
                     <button
                       onClick={() => handleEdit(product)}
                       className="text-blue-600 hover:text-blue-800 font-semibold text-sm"
                     >
-                      ✎ Edit
+                      <span className="inline-flex items-center gap-1">
+                        <UiIcon name="edit" className="h-4 w-4" />
+                        Edit
+                      </span>
                     </button>
                     <button
                       onClick={() => handleDelete(product.id)}
                       className="text-blue-600 hover:text-blue-800 font-semibold text-sm"
                     >
-                      🗑️ Delete
+                      <span className="inline-flex items-center gap-1">
+                        <UiIcon name="trash" className="h-4 w-4" />
+                        Delete
+                      </span>
                     </button>
                   </td>
                 </tr>

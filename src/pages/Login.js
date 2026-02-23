@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import UiIcon from '../components/UiIcon';
 
 function generateCaptcha() {
   const a = Math.floor(Math.random() * 9) + 1;
@@ -200,7 +201,9 @@ function Login() {
     <div className="min-h-screen bg-gradient-to-br from-primary to-black flex items-center justify-center p-4">
       <div className="w-full max-w-lg">
         <div className="text-center mb-8">
-          <div className="text-5xl mb-3">🏪</div>
+          <div className="mb-3 flex justify-center text-white">
+            <UiIcon name="box" className="h-12 w-12" />
+          </div>
           <h1 className="text-4xl font-bold text-white mb-2">Elamshelf Access</h1>
           <p className="text-blue-100 text-base">Customer and staff authentication</p>
         </div>
@@ -308,7 +311,7 @@ function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-primary text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition disabled:opacity-50"
+              className="w-full bg-primary text-white py-3 rounded-lg font-bold hover:bg-red-700 transition disabled:opacity-50"
             >
               {loading ? 'Please wait...' : 'Continue'}
             </button>

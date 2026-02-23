@@ -36,7 +36,7 @@ function Home() {
       <Slider />
 
       <section className="shell fade-up mt-8">
-        <div className="soft-section grid gap-8 p-6 sm:p-10 lg:grid-cols-[1.2fr_0.8fr]">
+        {/* <div className="soft-section grid gap-8 p-6 sm:p-10 lg:grid-cols-[1.2fr_0.8fr]">
           <div>
             <p className="mb-3 text-xs font-bold uppercase tracking-[0.16em] text-blue-700">Modern retail infrastructure</p>
             <h2 className="mb-4 text-3xl font-bold text-slate-900 sm:text-4xl">Everything your store needs to look premium and perform daily</h2>
@@ -62,7 +62,9 @@ function Home() {
               </div>
             ))}
           </div>
-        </div>
+        </div> */}
+
+        
       </section>
 
       <section className="shell mt-12">

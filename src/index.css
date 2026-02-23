@@ -11,8 +11,8 @@
   --text: #0e1628;
   --muted: #5d6b82;
   --primary: #0f172a;
-  --brand: #0b6cfb;
-  --brand-soft: #d9e9ff;
+  --brand: #fc0303;
+  --brand-soft: #ffd9d9;
   --success: #0ea777;
   --border: rgba(15, 23, 42, 0.12);
   --shadow: 0 14px 40px rgba(15, 23, 42, 0.08);
@@ -71,7 +71,7 @@ a {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--brand) 0%, #2d89ff 100%);
+  background: linear-gradient(135deg, var(--brand) 0%, #d40000 100%);
   color: #fff;
   border: none;
 }
@@ -84,6 +84,16 @@ a {
   background: rgba(255, 255, 255, 0.8);
   color: var(--text);
   border: 1px solid var(--border);
+}
+
+.blink-banner-text {
+  animation: bannerBlink 1.2s steps(1, end) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blink-banner-text {
+    animation: none;
+  }
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -101,6 +111,48 @@ a {
       opacity: 1;
       transform: translateY(0);
     }
+  }
+}
+
+@keyframes bannerBlink {
+  0%,
+  48% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0.35;
+  }
+}
+
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+
+  .order-print-overlay,
+  .order-print-overlay * {
+    visibility: visible !important;
+  }
+
+  .order-print-overlay {
+    position: static !important;
+    inset: auto !important;
+    display: block !important;
+    overflow: visible !important;
+    background: #fff !important;
+    padding: 0 !important;
+  }
+
+  .order-print-panel {
+    max-width: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+
+  .no-print {
+    display: none !important;
   }
 }
 

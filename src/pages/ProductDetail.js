@@ -26,7 +26,7 @@ function ProductDetail() {
         <p className="text-slate-600 mb-8">The product you are looking for does not exist.</p>
         <button
           onClick={() => navigate('/')}
-          className="rounded-lg bg-slate-900 px-8 py-3 font-semibold text-white hover:bg-blue-700 transition"
+          className="rounded-lg bg-slate-900 px-8 py-3 font-semibold text-white hover:bg-red-700 transition"
         >
           Back to Home
         </button>
@@ -218,7 +218,7 @@ function ProductDetail() {
 
           <button
             onClick={handleAddToCart}
-            className="w-full rounded-xl bg-slate-900 px-6 py-4 text-lg font-bold text-white transition hover:bg-blue-700"
+            className="w-full rounded-xl bg-slate-900 px-6 py-4 text-lg font-bold text-white transition hover:bg-red-700"
           >
             Add to Cart
           </button>

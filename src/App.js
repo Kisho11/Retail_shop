@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Navigate, Outlet, Route, Routes } from 'react-
 import { CartProvider } from './context/CartContext';
 import { AuthProvider } from './context/AuthContext';
 import { ProductProvider } from './context/ProductContext';
+import { OrderProvider } from './context/OrderContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -39,48 +40,50 @@ function App() {
   return (
     <ProductProvider>
       <AuthProvider>
-        <CartProvider>
-          <Router>
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Login />} />
+        <OrderProvider>
+          <CartProvider>
+            <Router>
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Login />} />
 
-              <Route
-                path="/admin/dashboard"
-                element={
-                  <ProtectedRoute requiredRole="admin">
-                    <AdminDashboard />
-                  </ProtectedRoute>
-                }
-              />
+                <Route
+                  path="/admin/dashboard"
+                  element={
+                    <ProtectedRoute requiredRole="admin">
+                      <AdminDashboard />
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route
-                path="/manager/dashboard"
-                element={
-                  <ProtectedRoute requiredRole="manager">
-                    <ManagerDashboard />
-                  </ProtectedRoute>
-                }
-              />
+                <Route
+                  path="/manager/dashboard"
+                  element={
+                    <ProtectedRoute requiredRole="manager">
+                      <ManagerDashboard />
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route element={<CustomerLayout />}>
-                <Route path="/" element={<Home />} />
-                <Route path="/product/:id" element={<ProductDetail />} />
-                <Route path="/cart" element={<Cart />} />
-                <Route path="/checkout" element={<Checkout />} />
-                <Route path="/products-by-industry" element={<ProductsByIndustry />} />
-                <Route path="/products-by-industry/:industry" element={<ProductsByIndustry />} />
-                <Route path="/showroom" element={<Showroom />} />
-                <Route path="/clients" element={<Clients />} />
-                <Route path="/reviews" element={<Reviews />} />
-                <Route path="/catalogue" element={<Catalogue />} />
-                <Route path="/sponsor" element={<Sponsor />} />
-                <Route path="/customer-portal" element={<CustomerPortal />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
-              </Route>
-            </Routes>
-          </Router>
-        </CartProvider>
+                <Route element={<CustomerLayout />}>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/product/:id" element={<ProductDetail />} />
+                  <Route path="/cart" element={<Cart />} />
+                  <Route path="/checkout" element={<Checkout />} />
+                  <Route path="/products-by-industry" element={<ProductsByIndustry />} />
+                  <Route path="/products-by-industry/:industry" element={<ProductsByIndustry />} />
+                  <Route path="/showroom" element={<Showroom />} />
+                  <Route path="/clients" element={<Clients />} />
+                  <Route path="/reviews" element={<Reviews />} />
+                  <Route path="/catalogue" element={<Catalogue />} />
+                  <Route path="/sponsor" element={<Sponsor />} />
+                  <Route path="/customer-portal" element={<CustomerPortal />} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Route>
+              </Routes>
+            </Router>
+          </CartProvider>
+        </OrderProvider>
       </AuthProvider>
     </ProductProvider>
   );

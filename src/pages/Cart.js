@@ -13,7 +13,7 @@ function ShoppingCart() {
         <p className="text-lg text-slate-600 mb-8">Your cart is empty</p>
         <Link
           to="/"
-          className="rounded-lg bg-slate-900 px-8 py-3 font-semibold text-white hover:bg-blue-700 transition inline-block"
+          className="rounded-lg bg-slate-900 px-8 py-3 font-semibold text-white hover:bg-red-700 transition inline-block"
         >
           Continue Shopping
         </Link>
@@ -130,7 +130,7 @@ function ShoppingCart() {
 
           <button
             onClick={() => navigate('/checkout')}
-            className="w-full rounded-lg bg-slate-900 text-white py-3 px-4 font-bold hover:bg-blue-700 transition mb-4"
+            className="w-full rounded-lg bg-slate-900 text-white py-3 px-4 font-bold hover:bg-red-700 transition mb-4"
           >
             Proceed to Checkout
           </button>

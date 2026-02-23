@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useProducts } from '../context/ProductContext';
+import UiIcon from '../components/UiIcon';
 
 function CategoryManagement() {
   const { categories, addCategory, deleteCategory, updateCategory } = useProducts();
@@ -77,20 +78,25 @@ function CategoryManagement() {
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-2xl font-bold text-primary mb-6">📁 Category Management</h3>
+        <h3 className="mb-6 flex items-center gap-2 text-2xl font-bold text-primary">
+          <UiIcon name="folder" className="h-6 w-6" />
+          Category Management
+        </h3>
 
         <div className="bg-white rounded-xl shadow-md p-6 mb-6">
           <h4 className="font-bold text-lg text-gray-800 mb-4">Add New Category</h4>
 
           {error && (
-            <div className="bg-blue-50 border-2 border-blue-500 text-blue-700 p-4 rounded-lg mb-4">
-              ⚠️ {error}
+            <div className="bg-blue-50 border-2 border-blue-500 text-blue-700 p-4 rounded-lg mb-4 inline-flex items-center gap-2">
+              <UiIcon name="alert" className="h-5 w-5" />
+              {error}
             </div>
           )}
 
           {success && (
-            <div className="bg-green-50 border-2 border-green-500 text-green-700 p-4 rounded-lg mb-4">
-              ✓ {success}
+            <div className="bg-green-50 border-2 border-green-500 text-green-700 p-4 rounded-lg mb-4 inline-flex items-center gap-2">
+              <UiIcon name="check" className="h-5 w-5" />
+              {success}
             </div>
           )}
 
@@ -111,7 +117,7 @@ function CategoryManagement() {
             />
             <button
               onClick={handleAddCategory}
-              className="bg-primary text-white px-8 py-3 rounded-lg font-bold hover:bg-blue-800 transition"
+              className="bg-primary text-white px-8 py-3 rounded-lg font-bold hover:bg-red-800 transition"
             >
               + Add
             </button>
@@ -166,7 +172,10 @@ function CategoryManagement() {
                       <div className="flex h-full items-center justify-center text-xs text-slate-500">No image</div>
                     )}
                   </div>
-                  <h5 className="text-lg font-bold text-gray-800 mb-4">📂 {category.name}</h5>
+                  <h5 className="mb-4 flex items-center gap-2 text-lg font-bold text-gray-800">
+                    <UiIcon name="folderOpen" className="h-5 w-5" />
+                    {category.name}
+                  </h5>
                   <div className="flex gap-2">
                     <button
                       onClick={() => {
@@ -174,15 +183,21 @@ function CategoryManagement() {
                         setEditName(category.name);
                         setEditImage(category.image || '');
                       }}
-                      className="flex-1 bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition"
+                      className="flex-1 bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-semibold hover:bg-red-700 transition"
                     >
-                      ✎ Edit
+                      <span className="inline-flex items-center gap-1">
+                        <UiIcon name="edit" className="h-4 w-4" />
+                        Edit
+                      </span>
                     </button>
                     <button
                       onClick={() => handleDeleteCategory(category.name)}
-                      className="flex-1 bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition"
+                      className="flex-1 bg-blue-600 text-white px-3 py-2 rounded-lg text-sm font-semibold hover:bg-red-700 transition"
                     >
-                      🗑️ Delete
+                      <span className="inline-flex items-center gap-1">
+                        <UiIcon name="trash" className="h-4 w-4" />
+                        Delete
+                      </span>
                     </button>
                   </div>
                 </div>

@@ -1,40 +1,104 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import products from '../data/products';
+import { useOrders } from '../context/OrderContext';
+import { useProducts } from '../context/ProductContext';
+import OrderDetailsModal from '../components/OrderDetailsModal';
+import UiIcon from '../components/UiIcon';
 
 function ManagerDashboard() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState('orders');
+  const { orders } = useOrders();
+  const { products, adjustStock, getInventorySummary } = useProducts();
 
-  // Mock data for manager (limited view)
+  const [activeTab, setActiveTab] = useState('orders');
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [inventorySearch, setInventorySearch] = useState('');
+  const [stockFilter, setStockFilter] = useState('all');
+
+  const recentOrders = [...orders].sort(
+    (a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date)
+  );
+
+  const inventorySummary = getInventorySummary();
+
+  const filteredInventory = useMemo(() => {
+    return products
+      .filter((product) => {
+        const term = inventorySearch.trim().toLowerCase();
+        if (!term) return true;
+        return (
+          product.name.toLowerCase().includes(term) ||
+          (product.inventory?.sku || '').toLowerCase().includes(term) ||
+          product.categories.join(' ').toLowerCase().includes(term)
+        );
+      })
+      .filter((product) => {
+        if (stockFilter === 'all') return true;
+        const onHand = Number(product.inventory?.onHand || 0);
+        const reserved = Number(product.inventory?.reserved || 0);
+        const available = Math.max(onHand - reserved, 0);
+        const reorderLevel = Number(product.inventory?.reorderLevel || 0);
+        if (stockFilter === 'out') return available <= 0;
+        if (stockFilter === 'low') return available > 0 && available <= reorderLevel;
+        return available > reorderLevel;
+      });
+  }, [products, inventorySearch, stockFilter]);
+
+  const recentMovements = useMemo(() => {
+    return products
+      .flatMap((product) =>
+        (product.inventory?.movements || []).map((movement) => ({
+          ...movement,
+          productId: product.id,
+          productName: product.name,
+          sku: product.inventory?.sku || '-',
+        }))
+      )
+      .sort((a, b) => new Date(b.at) - new Date(a.at))
+      .slice(0, 12);
+  }, [products]);
+
+  const pendingOrders = orders.filter((order) => order.status === 'Pending').length;
+  const lowStockProducts = products.filter((product) => {
+    const onHand = Number(product.inventory?.onHand || 0);
+    const reserved = Number(product.inventory?.reserved || 0);
+    const reorderLevel = Number(product.inventory?.reorderLevel || 0);
+    return Math.max(onHand - reserved, 0) <= reorderLevel;
+  }).length;
+
   const stats = {
-    totalOrders: 1250,
-    pendingOrders: 24,
-    lowStockProducts: 8,
+    totalOrders: orders.length,
+    pendingOrders,
+    lowStockProducts,
     pendingReviews: 12,
   };
-
-  const recentOrders = [
-    { id: 1001, customer: 'John Smith', amount: 450.00, status: 'Shipped', date: '2026-02-22' },
-    { id: 1002, customer: 'Emma Wilson', amount: 320.50, status: 'Processing', date: '2026-02-22' },
-    { id: 1003, customer: 'Mike Johnson', amount: 890.00, status: 'Delivered', date: '2026-02-21' },
-    { id: 1004, customer: 'Sarah Davis', amount: 220.75, status: 'Pending', date: '2026-02-21' },
-    { id: 1005, customer: 'Tom Brown', amount: 1500.00, status: 'Shipped', date: '2026-02-20' },
-  ];
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
+  const getStockState = (product) => {
+    const onHand = Number(product.inventory?.onHand || 0);
+    const reserved = Number(product.inventory?.reserved || 0);
+    const available = Math.max(onHand - reserved, 0);
+    const reorderLevel = Number(product.inventory?.reorderLevel || 0);
+
+    if (available <= 0) return { label: 'Out of Stock', classes: 'bg-red-100 text-red-700' };
+    if (available <= reorderLevel) return { label: 'Low Stock', classes: 'bg-yellow-100 text-yellow-800' };
+    return { label: 'Healthy', classes: 'bg-green-100 text-green-700' };
+  };
+
   return (
     <div className="min-h-screen bg-gray-100">
-      {/* Navbar */}
       <nav className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-4 shadow-lg">
         <div className="container mx-auto flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-yellow-300">👩‍💻 Manager Dashboard</h1>
+          <h1 className="flex items-center gap-2 text-3xl font-bold text-yellow-300">
+            <UiIcon name="userCog" className="h-8 w-8" />
+            Manager Dashboard
+          </h1>
           <div className="flex items-center gap-6">
             <div className="text-right">
               <p className="text-sm text-blue-100">Logged in as</p>
@@ -42,7 +106,7 @@ function ManagerDashboard() {
             </div>
             <button
               onClick={handleLogout}
-              className="bg-blue-500 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition"
+              className="bg-blue-500 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-semibold transition"
             >
               Logout
             </button>
@@ -51,7 +115,6 @@ function ManagerDashboard() {
       </nav>
 
       <div className="container mx-auto p-8">
-        {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl shadow-md">
             <div className="flex justify-between items-start">
@@ -59,7 +122,7 @@ function ManagerDashboard() {
                 <p className="text-gray-600 text-sm">Total Orders</p>
                 <p className="text-4xl font-bold text-blue-700 mt-2">{stats.totalOrders}</p>
               </div>
-              <span className="text-4xl">📋</span>
+              <UiIcon name="list" className="h-10 w-10 text-blue-700" />
             </div>
           </div>
 
@@ -69,7 +132,7 @@ function ManagerDashboard() {
                 <p className="text-gray-600 text-sm">Pending Orders</p>
                 <p className="text-4xl font-bold text-blue-700 mt-2">{stats.pendingOrders}</p>
               </div>
-              <span className="text-4xl">⏳</span>
+              <UiIcon name="clock" className="h-10 w-10 text-blue-700" />
             </div>
           </div>
 
@@ -79,7 +142,7 @@ function ManagerDashboard() {
                 <p className="text-gray-600 text-sm">Low Stock Items</p>
                 <p className="text-4xl font-bold text-yellow-700 mt-2">{stats.lowStockProducts}</p>
               </div>
-              <span className="text-4xl">⚠️</span>
+              <UiIcon name="alert" className="h-10 w-10 text-yellow-700" />
             </div>
           </div>
 
@@ -89,12 +152,11 @@ function ManagerDashboard() {
                 <p className="text-gray-600 text-sm">Pending Reviews</p>
                 <p className="text-4xl font-bold text-purple-700 mt-2">{stats.pendingReviews}</p>
               </div>
-              <span className="text-4xl">⭐</span>
+              <UiIcon name="star" className="h-10 w-10 text-purple-700" />
             </div>
           </div>
         </div>
 
-        {/* Tabs */}
         <div className="flex gap-4 mb-8 overflow-x-auto border-b border-gray-300 pb-4">
           {['orders', 'inventory', 'tasks'].map((tab) => (
             <button
@@ -111,17 +173,21 @@ function ManagerDashboard() {
           ))}
         </div>
 
-        {/* Orders Tab */}
         {activeTab === 'orders' && (
           <div className="bg-white rounded-xl shadow-md p-6">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-2xl font-bold text-blue-700">📋 Order Management</h3>
+              <h3 className="flex items-center gap-2 text-2xl font-bold text-blue-700">
+                <UiIcon name="list" className="h-6 w-6" />
+                Order Management
+              </h3>
               <div className="flex gap-2">
-                <button className="bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 transition">
-                  ✓ Mark Complete
+                <button className="inline-flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 transition">
+                  <UiIcon name="check" className="h-4 w-4" />
+                  Mark Complete
                 </button>
-                <button className="bg-orange-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-orange-700 transition">
-                  📦 Update Shipping
+                <button className="inline-flex items-center gap-2 bg-orange-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-orange-700 transition">
+                  <UiIcon name="truck" className="h-4 w-4" />
+                  Update Shipping
                 </button>
               </div>
             </div>
@@ -155,7 +221,12 @@ function ManagerDashboard() {
                       </td>
                       <td className="px-6 py-4 text-gray-600">{order.date}</td>
                       <td className="px-6 py-4">
-                        <button className="text-blue-600 hover:text-blue-800 font-semibold">Details</button>
+                        <button
+                          onClick={() => setSelectedOrder(order)}
+                          className="text-blue-600 hover:text-blue-800 font-semibold"
+                        >
+                          Details
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -165,65 +236,200 @@ function ManagerDashboard() {
           </div>
         )}
 
-        {/* Inventory Tab */}
         {activeTab === 'inventory' && (
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-2xl font-bold text-blue-700">📦 Inventory Management</h3>
-              <button className="bg-primary text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-800 transition">
-                + Update Stock
-              </button>
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div className="rounded-xl bg-white p-5 shadow-md">
+                <p className="text-xs font-bold uppercase tracking-wide text-gray-500">On Hand</p>
+                <p className="mt-2 text-3xl font-bold text-gray-900">{inventorySummary.totalOnHand}</p>
+              </div>
+              <div className="rounded-xl bg-white p-5 shadow-md">
+                <p className="text-xs font-bold uppercase tracking-wide text-gray-500">Reserved</p>
+                <p className="mt-2 text-3xl font-bold text-orange-700">{inventorySummary.totalReserved}</p>
+              </div>
+              <div className="rounded-xl bg-white p-5 shadow-md">
+                <p className="text-xs font-bold uppercase tracking-wide text-gray-500">Available</p>
+                <p className="mt-2 text-3xl font-bold text-green-700">{inventorySummary.totalAvailable}</p>
+              </div>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-100">
-                  <tr>
-                    <th className="px-6 py-3 text-left font-semibold text-gray-700">Product</th>
-                    <th className="px-6 py-3 text-left font-semibold text-gray-700">Stock</th>
-                    <th className="px-6 py-3 text-left font-semibold text-gray-700">Status</th>
-                    <th className="px-6 py-3 text-left font-semibold text-gray-700">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {products.slice(0, 8).map((product) => (
-                    <tr key={product.id} className="border-b border-gray-200 hover:bg-gray-50">
-                      <td className="px-6 py-4 font-semibold">{product.name}</td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <div className="w-24 bg-gray-200 rounded-full h-2">
-                            <div className="bg-green-500 h-2 rounded-full" style={{width: `${Math.random() * 100}%`}}></div>
-                          </div>
-                          <span className="text-sm font-semibold">{Math.floor(Math.random() * 100)}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        {Math.random() > 0.3 ? (
-                          <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-semibold">
-                            ✓ In Stock
-                          </span>
-                        ) : (
-                          <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold">
-                            ⚠️ Low
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4">
-                        <button className="text-blue-600 hover:text-blue-800 font-semibold">Edit</button>
-                      </td>
+
+            <div className="bg-white rounded-xl shadow-md p-6">
+              <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <h3 className="flex items-center gap-2 text-2xl font-bold text-blue-700">
+                  <UiIcon name="box" className="h-6 w-6" />
+                  Advanced Inventory Tracking
+                </h3>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <input
+                    value={inventorySearch}
+                    onChange={(e) => setInventorySearch(e.target.value)}
+                    placeholder="Search product / SKU / category"
+                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                  />
+                  <select
+                    value={stockFilter}
+                    onChange={(e) => setStockFilter(e.target.value)}
+                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                  >
+                    <option value="all">All Stock Levels</option>
+                    <option value="low">Low Stock</option>
+                    <option value="out">Out of Stock</option>
+                    <option value="healthy">Healthy</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[1050px]">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Product</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">SKU</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">On Hand</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Reserved</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Available</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Reorder</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Coverage</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Location</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Adjust</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {filteredInventory.map((product) => {
+                      const onHand = Number(product.inventory?.onHand || 0);
+                      const reserved = Number(product.inventory?.reserved || 0);
+                      const available = Math.max(onHand - reserved, 0);
+                      const reorderLevel = Number(product.inventory?.reorderLevel || 0);
+                      const usage = Math.max(Number(product.inventory?.averageDailyUsage || 1), 0.1);
+                      const coverageDays = Math.floor(available / usage);
+                      const stockState = getStockState(product);
+
+                      return (
+                        <tr key={product.id} className="border-b border-gray-200 hover:bg-gray-50">
+                          <td className="px-4 py-3">
+                            <p className="font-semibold text-gray-900">{product.name}</p>
+                            <p className="text-xs text-gray-500">{product.categories.join(' • ')}</p>
+                          </td>
+                          <td className="px-4 py-3 text-sm font-semibold text-gray-700">{product.inventory?.sku || '-'}</td>
+                          <td className="px-4 py-3 text-sm font-bold text-gray-900">{onHand}</td>
+                          <td className="px-4 py-3 text-sm text-orange-700">{reserved}</td>
+                          <td className="px-4 py-3 text-sm font-bold text-green-700">{available}</td>
+                          <td className="px-4 py-3 text-sm text-gray-700">{reorderLevel}</td>
+                          <td className="px-4 py-3 text-sm text-gray-700">
+                            {coverageDays} days
+                            <p className="text-xs text-gray-500">Usage: {usage.toFixed(1)}/day</p>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-700">{product.inventory?.location || '-'}</td>
+                          <td className="px-4 py-3">
+                            <span className={`rounded-full px-2 py-1 text-xs font-bold ${stockState.classes}`}>
+                              {stockState.label}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() =>
+                                  adjustStock(product.id, {
+                                    change: -1,
+                                    reason: 'Manual issue',
+                                    actor: user?.name || 'Manager',
+                                  })
+                                }
+                                className="rounded-md border border-gray-300 px-2 py-1 text-xs font-bold text-gray-700 hover:bg-gray-100"
+                              >
+                                -1
+                              </button>
+                              <button
+                                onClick={() =>
+                                  adjustStock(product.id, {
+                                    change: 1,
+                                    reason: 'Manual receipt',
+                                    actor: user?.name || 'Manager',
+                                  })
+                                }
+                                className="rounded-md bg-green-600 px-2 py-1 text-xs font-bold text-white hover:bg-green-700"
+                              >
+                                +1
+                              </button>
+                              <button
+                                onClick={() =>
+                                  adjustStock(product.id, {
+                                    change: 10,
+                                    reason: 'Bulk restock',
+                                    actor: user?.name || 'Manager',
+                                  })
+                                }
+                                className="rounded-md bg-primary px-2 py-1 text-xs font-bold text-white hover:bg-red-800"
+                              >
+                                +10
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-md p-6">
+              <h4 className="mb-4 text-xl font-bold text-blue-700">Recent Stock Movements</h4>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[920px]">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Time</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Product</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">SKU</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Type</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Qty Change</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Before -> After</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Reason</th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">By</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentMovements.map((movement) => (
+                      <tr key={movement.id} className="border-b border-gray-200">
+                        <td className="px-4 py-3 text-sm text-gray-600">{new Date(movement.at).toLocaleString()}</td>
+                        <td className="px-4 py-3 text-sm font-semibold text-gray-800">{movement.productName}</td>
+                        <td className="px-4 py-3 text-sm text-gray-700">{movement.sku}</td>
+                        <td className="px-4 py-3 text-sm text-gray-700">{movement.type}</td>
+                        <td className={`px-4 py-3 text-sm font-bold ${movement.quantity >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                          {movement.quantity >= 0 ? '+' : ''}
+                          {movement.quantity}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-700">
+                          {movement.previousOnHand} -> {movement.newOnHand}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-700">{movement.reason || '-'}</td>
+                        <td className="px-4 py-3 text-sm text-gray-700">{movement.actor || '-'}</td>
+                      </tr>
+                    ))}
+                    {recentMovements.length === 0 && (
+                      <tr>
+                        <td colSpan="8" className="px-4 py-6 text-center text-sm text-gray-500">
+                          No stock movement records yet.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}
 
-        {/* Tasks Tab */}
         {activeTab === 'tasks' && (
           <div className="bg-white rounded-xl shadow-md p-6">
             <div className="flex justify-between items-center mb-6">
-              <h3 className="text-2xl font-bold text-blue-700">✅ My Tasks</h3>
-              <button className="bg-primary text-white px-6 py-2 rounded-lg font-semibold hover:bg-blue-800 transition">
+              <h3 className="flex items-center gap-2 text-2xl font-bold text-blue-700">
+                <UiIcon name="tasks" className="h-6 w-6" />
+                My Tasks
+              </h3>
+              <button className="bg-primary text-white px-6 py-2 rounded-lg font-semibold hover:bg-red-800 transition">
                 + New Task
               </button>
             </div>
@@ -257,13 +463,17 @@ function ManagerDashboard() {
                     }`}>
                       {task.status}
                     </span>
-                    <button className="text-blue-600 hover:text-blue-800">◊</button>
+                    <button className="text-blue-600 hover:text-blue-800" aria-label="Task actions">
+                      <UiIcon name="ellipsis" className="h-4 w-4" />
+                    </button>
                   </div>
                 </div>
               ))}
             </div>
           </div>
         )}
+
+        <OrderDetailsModal order={selectedOrder} onClose={() => setSelectedOrder(null)} accentClass="text-blue-700" />
       </div>
     </div>
   );

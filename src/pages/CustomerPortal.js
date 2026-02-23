@@ -254,7 +254,7 @@ function CustomerPortal() {
 
             <button
               type="submit"
-              className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-blue-500"
+              className="rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-red-600"
             >
               Save personal updates
             </button>
@@ -336,7 +336,7 @@ function CustomerPortal() {
             <div className="flex gap-3">
               <button
                 type="submit"
-                className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-blue-700"
+                className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-red-700"
               >
                 {isEditing ? 'Update payment method' : 'Save payment method'}
               </button>
@@ -404,7 +404,7 @@ function CustomerPortal() {
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <button
             onClick={saveConsents}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-500"
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-600"
           >
             Save consent choices
           </button>
@@ -457,7 +457,7 @@ function CustomerPortal() {
         </p>
 
         <div className="mt-4 flex flex-wrap gap-3">
-          <button onClick={exportData} className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700">
+          <button onClick={exportData} className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white hover:bg-red-700">
             Export my data
           </button>
           <a href="mailto:privacy@elamshelf.com" className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">

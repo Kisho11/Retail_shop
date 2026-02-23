@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useOrders } from '../context/OrderContext';
+import UiIcon from '../components/UiIcon';
 
 function Checkout() {
   const navigate = useNavigate();
   const { cartItems, getTotalPrice, clearCart } = useCart();
+  const { placeOrder } = useOrders();
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -20,6 +23,12 @@ function Checkout() {
   });
 
   const [orderPlaced, setOrderPlaced] = useState(false);
+  const [placedOrder, setPlacedOrder] = useState(null);
+  const subtotal = getTotalPrice();
+  const taxRate = 0.1;
+  const taxAmount = subtotal * taxRate;
+  const shippingFee = 0;
+  const totalWithTax = subtotal + taxAmount + shippingFee;
 
   if (cartItems.length === 0 && !orderPlaced) {
     return (
@@ -28,7 +37,7 @@ function Checkout() {
         <p className="text-lg text-gray-600 mb-6">Your cart is empty</p>
         <button
           onClick={() => navigate('/')}
-          className="bg-primary text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition font-semibold"
+          className="bg-primary text-white px-8 py-3 rounded-lg hover:bg-red-700 transition font-semibold"
         >
           Back to Home
         </button>
@@ -57,7 +66,46 @@ function Checkout() {
       return;
     }
 
-    // Simulate order placement
+    const fullName = `${formData.firstName} ${formData.lastName}`.trim();
+    const sanitizedCardDigits = formData.cardNumber.replace(/\D/g, '');
+    const cardLast4 = sanitizedCardDigits.slice(-4);
+    const createdOrder = placeOrder({
+      customerFirstName: formData.firstName,
+      customerLastName: formData.lastName,
+      customer: fullName || formData.firstName,
+      customerEmail: formData.email,
+      customerPhone: formData.phone,
+      shippingAddress: {
+        address: formData.address,
+        city: formData.city,
+        state: formData.state,
+        zipCode: formData.zipCode,
+      },
+      amount: totalWithTax,
+      pricing: {
+        subtotal,
+        taxRate,
+        taxAmount,
+        shippingFee,
+        total: totalWithTax,
+      },
+      payment: {
+        method: 'Card',
+        cardLast4: cardLast4 || '',
+        expiryDate: formData.expiryDate || '',
+      },
+      items: cartItems.map((item) => ({
+        lineId: item.lineId,
+        id: item.id,
+        name: item.name,
+        quantity: item.quantity,
+        price: item.salePrice || item.price,
+        selectedColor: item.selectedColor || null,
+        selectedSize: item.selectedSize || null,
+      })),
+    });
+
+    setPlacedOrder(createdOrder);
     setOrderPlaced(true);
     clearCart();
   };
@@ -66,12 +114,22 @@ function Checkout() {
     return (
       <div className="container mx-auto p-8 text-center py-16">
         <div className="max-w-md mx-auto bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-500 rounded-xl p-12 shadow-xl">
-          <div className="text-6xl mb-6 animate-bounce">✓</div>
+          <div className="mb-6 flex justify-center animate-bounce">
+            <UiIcon name="check" className="h-14 w-14 text-green-700" strokeWidth={2.5} />
+          </div>
           <h1 className="text-4xl font-bold text-green-700 mb-4">Order Confirmed!</h1>
           <p className="text-gray-700 mb-4 text-lg">
             Thank you for your purchase. Your order has been successfully placed.
           </p>
           <div className="bg-white p-4 rounded-lg mb-6 text-sm text-gray-600">
+            <p className="mb-2">
+              <strong>Order ID:</strong> #{placedOrder?.id}
+            </p>
+            {placedOrder?.orderTime && (
+              <p className="mb-2">
+                <strong>Placed at:</strong> {placedOrder.orderTime}
+              </p>
+            )}
             <p className="mb-2">
               <strong>Confirmation email:</strong> {formData.email}
             </p>
@@ -93,8 +151,6 @@ function Checkout() {
     );
   }
 
-  const totalWithTax = getTotalPrice() * 1.1;
-
   return (
     <div className="container mx-auto p-8">
       <h1 className="text-4xl font-bold text-primary mb-8">Checkout</h1>
@@ -104,7 +160,10 @@ function Checkout() {
         <form onSubmit={handleSubmit} className="lg:col-span-2 space-y-6">
           {/* Shipping Information */}
           <div className="bg-white p-8 rounded-xl shadow-md">
-            <h2 className="text-2xl font-bold text-primary mb-6">📦 Shipping Information</h2>
+            <h2 className="mb-6 flex items-center gap-2 text-2xl font-bold text-primary">
+              <UiIcon name="truck" className="h-6 w-6" />
+              Shipping Information
+            </h2>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -219,7 +278,10 @@ function Checkout() {
 
           {/* Payment Information */}
           <div className="bg-white p-8 rounded-xl shadow-md">
-            <h2 className="text-2xl font-bold text-primary mb-6">💳 Payment Information</h2>
+            <h2 className="mb-6 flex items-center gap-2 text-2xl font-bold text-primary">
+              <UiIcon name="payment" className="h-6 w-6" />
+              Payment Information
+            </h2>
 
             <div>
               <label className="block text-gray-700 font-semibold mb-2">
@@ -313,7 +375,7 @@ function Checkout() {
           <div className="space-y-3 mb-6 pb-6 border-b border-gray-300">
             <div className="flex justify-between text-gray-700">
               <span>Subtotal:</span>
-              <span className="font-semibold">${getTotalPrice().toFixed(2)}</span>
+              <span className="font-semibold">${subtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-gray-700">
               <span>Shipping:</span>
@@ -321,7 +383,7 @@ function Checkout() {
             </div>
             <div className="flex justify-between text-gray-700">
               <span>Tax (10%):</span>
-              <span className="font-semibold">${(getTotalPrice() * 0.1).toFixed(2)}</span>
+              <span className="font-semibold">${taxAmount.toFixed(2)}</span>
             </div>
           </div>
 
