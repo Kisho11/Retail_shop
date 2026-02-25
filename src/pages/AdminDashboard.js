@@ -62,7 +62,7 @@ function AdminDashboard() {
         </div>
       </nav>
 
-      <div className="container mx-auto p-8">
+      <div className="container mx-auto px-4 py-8 sm:px-8">
         {/* Tabs */}
         <div className="flex gap-4 mb-8 overflow-x-auto border-b border-gray-300 pb-4">
           {['overview', 'products', 'categories', 'managers', 'orders', 'customers', 'reports'].map((tab) => (

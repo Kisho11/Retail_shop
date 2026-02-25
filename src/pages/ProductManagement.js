@@ -13,7 +13,9 @@ function ProductManagement() {
     salePrice: '',
     categories: [],
     industries: [],
-    image: '',
+    imageCount: 1,
+    imageUrls: [''],
+    mainImageIndex: 0,
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -31,7 +33,9 @@ function ProductManagement() {
       salePrice: '',
       categories: [],
       industries: [],
-      image: '',
+      imageCount: 1,
+      imageUrls: [''],
+      mainImageIndex: 0,
     });
     setEditingId(null);
     setError('');
@@ -60,6 +64,33 @@ function ProductManagement() {
     });
   };
 
+  const handleImageCountChange = (value) => {
+    const parsed = Math.max(1, Math.min(12, Number(value) || 1));
+    setFormData((prev) => {
+      const nextUrls = [...prev.imageUrls];
+      if (parsed > nextUrls.length) {
+        for (let i = nextUrls.length; i < parsed; i += 1) nextUrls.push('');
+      } else {
+        nextUrls.length = parsed;
+      }
+      const nextMainIndex = Math.min(prev.mainImageIndex, parsed - 1);
+      return {
+        ...prev,
+        imageCount: parsed,
+        imageUrls: nextUrls,
+        mainImageIndex: nextMainIndex,
+      };
+    });
+  };
+
+  const handleImageUrlChange = (index, value) => {
+    setFormData((prev) => {
+      const nextUrls = [...prev.imageUrls];
+      nextUrls[index] = value;
+      return { ...prev, imageUrls: nextUrls };
+    });
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     setError('');
@@ -75,11 +106,30 @@ function ProductManagement() {
       return;
     }
 
+    const imageUrls = formData.imageUrls.map((url) => url.trim());
+    if (imageUrls.length === 0 || imageUrls.some((url) => !url)) {
+      setError('Please provide all image URLs and select a main image');
+      return;
+    }
+
+    const mainImage = imageUrls[formData.mainImageIndex] || imageUrls[0];
+    const payload = {
+      name: formData.name,
+      description: formData.description,
+      price: formData.price,
+      salePrice: formData.salePrice,
+      categories: formData.categories,
+      industries: formData.industries,
+      image: mainImage,
+      galleryImages: imageUrls.filter((_, idx) => idx !== formData.mainImageIndex),
+      imageCount: imageUrls.length,
+    };
+
     if (editingId) {
-      updateProduct(editingId, formData);
+      updateProduct(editingId, payload);
       setSuccess('Product updated successfully!');
     } else {
-      addProduct(formData);
+      addProduct(payload);
       setSuccess('Product added successfully!');
     }
 
@@ -88,7 +138,19 @@ function ProductManagement() {
   };
 
   const handleEdit = (product) => {
-    setFormData(product);
+    const imageUrls = [product.image, ...(product.galleryImages || [])].filter(Boolean);
+    const safeUrls = imageUrls.length > 0 ? imageUrls : [''];
+    setFormData({
+      name: product.name || '',
+      description: product.description || '',
+      price: product.price || '',
+      salePrice: product.salePrice || '',
+      categories: product.categories || [],
+      industries: product.industries || [],
+      imageCount: safeUrls.length,
+      imageUrls: safeUrls,
+      mainImageIndex: 0,
+    });
     setEditingId(product.id);
     setShowAddForm(true);
     window.scrollTo(0, 0);
@@ -194,15 +256,45 @@ function ProductManagement() {
             </div>
 
             <div>
-              <label className="block text-gray-700 font-semibold mb-2">Image URL</label>
+              <label className="block text-gray-700 font-semibold mb-2">Number of Images</label>
               <input
-                type="text"
-                name="image"
-                value={formData.image}
-                onChange={handleInputChange}
-                placeholder="/image-name.jpg"
+                type="number"
+                min="1"
+                max="12"
+                value={formData.imageCount}
+                onChange={(e) => handleImageCountChange(e.target.value)}
                 className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:border-primary focus:outline-none"
               />
+              <p className="mt-1 text-xs text-gray-500">If you set 8, this product will show 8 images in single product view.</p>
+            </div>
+
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">Product Images (Select Main Image)</label>
+              <div className="space-y-3">
+                {formData.imageUrls.map((url, idx) => (
+                  <div key={`image-url-${idx}`} className="rounded-lg border border-gray-200 p-3">
+                    <div className="mb-2 flex items-center justify-between">
+                      <p className="text-sm font-semibold text-gray-700">Image {idx + 1}</p>
+                      <label className="inline-flex items-center gap-2 text-xs font-semibold text-gray-700">
+                        <input
+                          type="radio"
+                          name="main-image"
+                          checked={formData.mainImageIndex === idx}
+                          onChange={() => setFormData((prev) => ({ ...prev, mainImageIndex: idx }))}
+                        />
+                        Main image
+                      </label>
+                    </div>
+                    <input
+                      type="text"
+                      value={url}
+                      onChange={(e) => handleImageUrlChange(idx, e.target.value)}
+                      placeholder={`/image-${idx + 1}.jpg`}
+                      className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:border-primary focus:outline-none"
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
 
             {/* Categories */}
@@ -276,6 +368,7 @@ function ProductManagement() {
               <tr>
                 <th className="px-6 py-3 text-left font-semibold text-gray-700">Name</th>
                 <th className="px-6 py-3 text-left font-semibold text-gray-700">Price</th>
+                <th className="px-6 py-3 text-left font-semibold text-gray-700">Images</th>
                 <th className="px-6 py-3 text-left font-semibold text-gray-700">Stock</th>
                 <th className="px-6 py-3 text-left font-semibold text-gray-700">Categories</th>
                 <th className="px-6 py-3 text-left font-semibold text-gray-700">Status</th>
@@ -291,6 +384,9 @@ function ProductManagement() {
                     {product.salePrice && (
                       <span className="text-sm text-gray-600 ml-2 line-through">${product.salePrice}</span>
                     )}
+                  </td>
+                  <td className="px-6 py-4 font-semibold text-gray-800">
+                    {1 + (product.galleryImages?.length || 0)}
                   </td>
                   <td className="px-6 py-4">
                     <p className="font-bold text-gray-800">{product.inventory?.onHand ?? 0}</p>

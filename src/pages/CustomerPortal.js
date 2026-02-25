@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import BackButton from '../components/BackButton';
 
 const PROFILE_KEY = 'customerProfile';
 const PAYMENT_KEY = 'customerPaymentMethods';
@@ -201,6 +202,7 @@ function CustomerPortal() {
 
   return (
     <section className="shell py-10">
+      <BackButton className="mb-4" />
       <div className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
         <p className="text-xs font-bold uppercase tracking-[0.14em] text-blue-700">Customer account</p>
         <h1 className="mt-2 text-3xl font-bold text-slate-900 sm:text-4xl">Customer Portal</h1>

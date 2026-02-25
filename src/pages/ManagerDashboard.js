@@ -114,7 +114,7 @@ function ManagerDashboard() {
         </div>
       </nav>
 
-      <div className="container mx-auto p-8">
+      <div className="container mx-auto px-4 py-8 sm:px-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl shadow-md">
             <div className="flex justify-between items-start">

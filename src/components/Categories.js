@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useProducts } from '../context/ProductContext';
 import ProductCard from './ProductCard';
+import { useLanguage } from '../context/LanguageContext';
 
 const catalogues = [
   { name: 'Wall Bays Catalogue', url: '/downloads/wall-bays.pdf' },
@@ -11,8 +12,9 @@ const catalogues = [
 
 function Categories() {
   const { products, categories } = useProducts();
+  const { t } = useLanguage();
 
-  const [selectedCategory, setSelectedCategory] = useState('All Products');
+  const [selectedCategory, setSelectedCategory] = useState('__all__');
 
   const categoryItems = useMemo(() => {
     const derivedNames = [...new Set(products.flatMap((item) => item.categories || []))];
@@ -29,13 +31,13 @@ function Categories() {
         image: products.find((item) => item.categories?.includes(name))?.image || '',
       }));
 
-    return [{ name: 'All Products', image: '/store-counter.jpg' }, ...fromAdmin, ...missingFromAdmin];
+    return [{ name: '__all__', image: '/store-counter.jpg' }, ...fromAdmin, ...missingFromAdmin];
   }, [categories, products]);
 
   const categoryCounts = useMemo(() => {
-    const counts = { 'All Products': products.length };
+    const counts = { __all__: products.length };
     categoryItems.forEach((category) => {
-      if (category.name !== 'All Products') {
+      if (category.name !== '__all__') {
         counts[category.name] = products.filter((item) => item.categories?.includes(category.name)).length;
       }
     });
@@ -43,7 +45,7 @@ function Categories() {
   }, [categoryItems, products]);
 
   const filteredProducts = useMemo(() => {
-    if (selectedCategory === 'All Products') return products;
+    if (selectedCategory === '__all__') return products;
     return products.filter((item) => item.categories?.includes(selectedCategory));
   }, [products, selectedCategory]);
 
@@ -53,14 +55,15 @@ function Categories() {
     <section className="py-10">
       <div className="mx-auto w-[min(1500px,100%-1.5rem)]">
       <div className="mb-10">
-        <p className="text-xs font-bold uppercase tracking-[0.14em] text-blue-700">Shop by category</p>
-        <h2 className="mt-2 text-4xl font-bold text-slate-900 sm:text-5xl">Choose category from side navigation</h2>
-        <p className="mt-3 max-w-4xl text-base text-slate-600">Use the large left category panel to instantly filter products by type.</p>
+        <p className="text-xs font-bold uppercase tracking-[0.14em] text-blue-700">{t('categories.shopByCategory')}</p>
+        <h2 className="mt-2 text-4xl font-bold text-slate-900 sm:text-5xl">{t('categories.chooseCategory')}</h2>
+        <p className="mt-3 max-w-4xl text-base text-slate-600">{t('categories.categoryHelp')}</p>
       </div>
 
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6">
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[340px_1fr]">
-        <aside className="rounded-2xl border border-slate-200 bg-white p-5 lg:sticky lg:top-24 lg:h-fit">
-          <h3 className="mb-4 text-base font-bold uppercase tracking-[0.12em] text-slate-500">Categories</h3>
+        <aside className="p-1 lg:sticky lg:top-24 lg:h-fit">
+          <h3 className="mb-4 text-base font-bold uppercase tracking-[0.12em] text-slate-500">{t('categories.categories')}</h3>
           <div className="space-y-2 max-h-[70vh] overflow-y-auto pr-1">
             {categoryItems.map((category) => {
               const isActive = selectedCategory === category.name;
@@ -68,10 +71,10 @@ function Categories() {
                 <button
                   key={category.name}
                   onClick={() => setSelectedCategory(category.name)}
-                  className={`w-full rounded-xl border p-2 text-left transition ${
+                  className={`w-full rounded-xl border-0 p-2 text-left transition ${
                     isActive
-                      ? 'border-red-800 bg-gradient-to-r from-red-700 to-red-900 text-white ring-2 ring-red-900/40'
-                      : 'border-slate-200 bg-white hover:border-blue-200 hover:bg-slate-50'
+                      ? 'bg-primary text-white'
+                      : 'bg-white hover:bg-slate-50'
                   }`}
                 >
                   <div className="flex items-center gap-3 p-1">
@@ -81,9 +84,11 @@ function Categories() {
                       ) : null}
                     </div>
                     <div className="min-w-0">
-                      <p className={`truncate text-base font-bold ${isActive ? 'text-white' : 'text-slate-900'}`}>{category.name}</p>
+                      <p className={`truncate text-base font-bold ${isActive ? 'text-white' : 'text-slate-900'}`}>
+                        {category.name === '__all__' ? t('categories.allProducts') : category.name}
+                      </p>
                       <p className={`text-sm font-semibold ${isActive ? 'text-blue-100' : 'text-slate-500'}`}>
-                        {categoryCounts[category.name] || 0} items
+                        {categoryCounts[category.name] || 0} {t('categories.items')}
                       </p>
                     </div>
                   </div>
@@ -94,18 +99,20 @@ function Categories() {
         </aside>
 
         <div>
-          <div className="mb-6 rounded-2xl border border-slate-200 bg-white overflow-hidden">
+          <div className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white">
             <div className="h-60 bg-slate-100">
               {selectedCategoryMeta?.image ? (
                 <img src={selectedCategoryMeta.image} alt={selectedCategoryMeta.name} className="h-full w-full object-cover" />
               ) : (
-                <div className="flex h-full items-center justify-center text-slate-500">No category image</div>
+                <div className="flex h-full items-center justify-center text-slate-500">{t('categories.noCategoryImage')}</div>
               )}
             </div>
             <div className="p-6">
-              <h3 className="text-3xl font-bold text-slate-900">{selectedCategory}</h3>
+              <h3 className="text-3xl font-bold text-slate-900">
+                {selectedCategory === '__all__' ? t('categories.allProducts') : selectedCategory}
+              </h3>
               <p className="mt-2 text-base text-slate-600">
-                Showing <span className="font-bold text-slate-900">{filteredProducts.length}</span> products.
+                {t('categories.showing')} <span className="font-bold text-slate-900">{filteredProducts.length}</span> {t('categories.products')}
               </p>
             </div>
           </div>
@@ -117,10 +124,11 @@ function Categories() {
           </div>
         </div>
       </div>
+      </div>
 
       <div className="mt-14 rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
-        <h3 className="text-2xl font-bold text-slate-900">Download technical catalogues</h3>
-        <p className="mt-2 text-slate-600">Get dimensions and specifications for planning and procurement.</p>
+        <h3 className="text-2xl font-bold text-slate-900">{t('categories.downloadTitle')}</h3>
+        <p className="mt-2 text-slate-600">{t('categories.downloadDesc')}</p>
 
         <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           {catalogues.map((cat) => (
@@ -131,7 +139,7 @@ function Categories() {
               className="rounded-xl border border-slate-200 bg-slate-50 p-4 transition hover:border-blue-300 hover:bg-blue-50"
             >
               <p className="text-sm font-bold text-slate-900">{cat.name}</p>
-              <p className="mt-1 text-xs font-semibold text-blue-700">Download PDF</p>
+              <p className="mt-1 text-xs font-semibold text-blue-700">{t('categories.downloadPdf')}</p>
             </a>
           ))}
         </div>

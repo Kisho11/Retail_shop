@@ -11,11 +11,12 @@
   --text: #0e1628;
   --muted: #5d6b82;
   --primary: #0f172a;
-  --brand: #fc0303;
-  --brand-soft: #ffd9d9;
+  --brand: #c41e3a;
+  --brand-soft: #fce7ec;
   --success: #0ea777;
   --border: rgba(15, 23, 42, 0.12);
   --shadow: 0 14px 40px rgba(15, 23, 42, 0.08);
+  --site-outline: #c41e3a;
 }
 
 * {
@@ -28,10 +29,17 @@ body,
   min-height: 100%;
 }
 
+html {
+  background: #f4f7fb;
+  overscroll-behavior-y: none;
+}
+
 body {
   margin: 0;
   color: var(--text);
   font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  overscroll-behavior-y: none;
+  box-shadow: inset 0 0 0 4px var(--site-outline);
   background:
     radial-gradient(1200px 500px at 10% -10%, #dbeafe 0%, transparent 60%),
     radial-gradient(900px 400px at 100% 0%, #e0f2fe 0%, transparent 55%),
@@ -71,7 +79,7 @@ a {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--brand) 0%, #d40000 100%);
+  background: linear-gradient(135deg, var(--brand) 0%, #a51831 100%);
   color: #fff;
   border: none;
 }
@@ -86,12 +94,56 @@ a {
   border: 1px solid var(--border);
 }
 
+.nav-submenu-item {
+  display: block;
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  color: #334155;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.nav-submenu-item:hover {
+  background: #fef2f2;
+  color: #c41e3a;
+}
+
 .blink-banner-text {
   animation: bannerBlink 1.2s steps(1, end) infinite;
 }
 
+.phone-glow {
+  animation: phoneGlow 1.5s ease-in-out infinite;
+}
+
+.logo-marquee {
+  overflow: hidden;
+  position: relative;
+}
+
+.logo-track {
+  display: flex;
+  width: max-content;
+  animation: logoMarquee 22s linear infinite;
+}
+
+.logo-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 2rem;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .blink-banner-text {
+    animation: none;
+  }
+
+  .hero-pan {
+    animation: none;
+  }
+
+  .logo-track {
     animation: none;
   }
 }
@@ -112,6 +164,11 @@ a {
       transform: translateY(0);
     }
   }
+
+  .hero-pan {
+    animation: heroPan 9s ease-in-out infinite alternate;
+    transform-origin: center center;
+  }
 }
 
 @keyframes bannerBlink {
@@ -122,6 +179,36 @@ a {
   50%,
   100% {
     opacity: 0.35;
+  }
+}
+
+@keyframes heroPan {
+  0% {
+    transform: scale(1) translate3d(0, 0, 0);
+  }
+  100% {
+    transform: scale(1.16) translate3d(-4%, -3%, 0);
+  }
+}
+
+@keyframes phoneGlow {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 10px 24px rgba(196, 30, 58, 0.35);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 14px 30px rgba(196, 30, 58, 0.55);
+  }
+}
+
+@keyframes logoMarquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
   }
 }
 

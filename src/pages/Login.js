@@ -204,7 +204,7 @@ function Login() {
           <div className="mb-3 flex justify-center text-white">
             <UiIcon name="box" className="h-12 w-12" />
           </div>
-          <h1 className="text-4xl font-bold text-white mb-2">Elamshelf Access</h1>
+          <h1 className="text-3xl sm:text-4xl font-bold text-white mb-2">Elamshelf Access</h1>
           <p className="text-blue-100 text-base">Customer and staff authentication</p>
         </div>
 

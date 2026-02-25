@@ -1,27 +1,64 @@
 import React from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import products from '../data/products';
 import ProductCard from '../components/ProductCard';
+import { useLanguage } from '../context/LanguageContext';
+import BackButton from '../components/BackButton';
 
 function ProductsByIndustry() {
   const { industry } = useParams();
+  const [searchParams] = useSearchParams();
+  const { t } = useLanguage();
   const formattedIndustry = industry ? decodeURIComponent(industry).replace(/-/g, ' ') : null;
+  const query = searchParams.get('q')?.trim() || '';
+  const normalizedQuery = query.toLowerCase();
+  const hasSearchOrIndustryFilter = Boolean(query || formattedIndustry);
 
-  const filteredProducts = formattedIndustry
-    ? products.filter((p) =>
-        p.industries?.some((ind) => ind.toLowerCase() === formattedIndustry.toLowerCase())
-      )
-    : products;
+  const filteredProducts = products.filter((product) => {
+    const matchesIndustry = formattedIndustry
+      ? product.industries?.some((ind) => ind.toLowerCase() === formattedIndustry.toLowerCase())
+      : true;
+
+    if (!matchesIndustry) {
+      return false;
+    }
+
+    if (!normalizedQuery) {
+      return true;
+    }
+
+    const searchableContent = [
+      product.name,
+      product.description,
+      ...(product.categories || []),
+      ...(product.industries || []),
+    ]
+      .join(' ')
+      .toLowerCase();
+
+    return searchableContent.includes(normalizedQuery);
+  });
 
   return (
     <section className="shell py-10">
       <div className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
-        <p className="text-xs font-bold uppercase tracking-[0.14em] text-blue-700">Industry catalog</p>
-        <h1 className="mt-2 text-3xl font-bold text-slate-900 sm:text-4xl">Products by Industry</h1>
-        {formattedIndustry ? (
-          <p className="mt-3 text-slate-600">Showing products for <span className="font-semibold text-slate-900">{formattedIndustry}</span>.</p>
-        ) : (
-          <p className="mt-3 text-slate-600">Select an industry from navigation to narrow product recommendations.</p>
+        {hasSearchOrIndustryFilter && (
+          <BackButton className="mb-4" />
+        )}
+        <p className="text-xs font-bold uppercase tracking-[0.14em] text-blue-700">{t('productsPage.industryCatalog')}</p>
+        <h1 className="mt-2 text-3xl font-bold text-slate-900 sm:text-4xl">{t('productsPage.title')}</h1>
+        {formattedIndustry && (
+          <p className="mt-3 text-slate-600">
+            {t('productsPage.showingFor', undefined, { industry: formattedIndustry })}
+          </p>
+        )}
+        {query && (
+          <p className="mt-2 text-slate-600">
+            {t('productsPage.searchResults', undefined, { query })}
+          </p>
+        )}
+        {!formattedIndustry && !query && (
+          <p className="mt-3 text-slate-600">{t('productsPage.help')}</p>
         )}
       </div>
 
@@ -33,7 +70,7 @@ function ProductsByIndustry() {
         </div>
       ) : (
         <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-600">
-          No products found for this industry yet.
+          {t('productsPage.noProducts')}
         </div>
       )}
     </section>

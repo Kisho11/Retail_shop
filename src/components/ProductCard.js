@@ -1,9 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useLanguage } from '../context/LanguageContext';
 
 function ProductCard({ product }) {
   const { addToCart } = useCart();
+  const { t } = useLanguage();
 
   const handleAddToCart = (e) => {
     e.preventDefault();
@@ -28,7 +30,7 @@ function ProductCard({ product }) {
           )}
           {hasSale && (
             <span className="absolute left-3 top-3 rounded-full bg-emerald-500 px-3 py-1 text-xs font-bold uppercase text-white">
-              On Sale
+              {t('product.onSale')}
             </span>
           )}
           {product.modelUrl && (
@@ -65,7 +67,7 @@ function ProductCard({ product }) {
             onClick={handleAddToCart}
             className="mt-auto rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-red-700"
           >
-            Add to cart
+            {t('product.addToCart')}
           </button>
         </div>
       </article>

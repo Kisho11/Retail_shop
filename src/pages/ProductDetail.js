@@ -1,7 +1,23 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import UiIcon from '../components/UiIcon';
+import BackButton from '../components/BackButton';
 import products from '../data/products';
+
+const uiConfig = {
+  rating: 4,
+  reviewCount: 117,
+};
+
+const swatchColor = (name) => {
+  const token = name.toLowerCase();
+  if (token.includes('black') || token.includes('charcoal') || token.includes('graphite')) return '#111827';
+  if (token.includes('white') || token.includes('pearl')) return '#f8fafc';
+  if (token.includes('gray') || token.includes('grey') || token.includes('silver')) return '#9ca3af';
+  if (token.includes('oak') || token.includes('walnut')) return '#8b5a2b';
+  return '#d1d5db';
+};
 
 function ProductDetail() {
   const { id } = useParams();
@@ -9,24 +25,29 @@ function ProductDetail() {
   const { addToCart } = useCart();
   const product = products.find((p) => p.id === parseInt(id, 10));
 
-  const defaultColor = product?.colors?.[0] || '';
-  const defaultSize = product?.sizes?.[0] || '';
-
-  const [activeView, setActiveView] = useState('image');
-  const [selectedColor, setSelectedColor] = useState(defaultColor);
-  const [selectedSize, setSelectedSize] = useState(defaultSize);
+  const [selectedColor, setSelectedColor] = useState(product?.colors?.[0] || '');
+  const [selectedSize, setSelectedSize] = useState(product?.sizes?.[0] || '');
   const [quantity, setQuantity] = useState(1);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [isHoverZoomed, setIsHoverZoomed] = useState(false);
+  const [zoomOrigin, setZoomOrigin] = useState('50% 50%');
 
   const unitPrice = useMemo(() => product?.salePrice || product?.price || 0, [product]);
+
+  useEffect(() => {
+    setSelectedImageIndex(0);
+    setIsHoverZoomed(false);
+    setZoomOrigin('50% 50%');
+  }, [product?.id]);
 
   if (!product) {
     return (
       <div className="shell py-16 text-center">
-        <h1 className="text-4xl font-bold text-blue-600 mb-4">Product Not Found</h1>
-        <p className="text-slate-600 mb-8">The product you are looking for does not exist.</p>
+        <h1 className="mb-4 text-3xl sm:text-4xl font-bold text-primary">Product Not Found</h1>
+        <p className="mb-8 text-slate-600">The product you are looking for does not exist.</p>
         <button
           onClick={() => navigate('/')}
-          className="rounded-lg bg-slate-900 px-8 py-3 font-semibold text-white hover:bg-red-700 transition"
+          className="rounded-lg bg-primary px-8 py-3 font-semibold text-white transition hover:bg-red-700"
         >
           Back to Home
         </button>
@@ -34,7 +55,15 @@ function ProductDetail() {
     );
   }
 
-  const handleAddToCart = () => {
+  const gallery =
+    product.galleryImages?.length > 0
+      ? [product.image, ...product.galleryImages].filter(Boolean)
+      : [product.image, product.image, product.image, product.image].filter(Boolean);
+  const selectedImage = gallery[selectedImageIndex] || product.image;
+  const breadcrumbs = [product.categories?.[0], product.industries?.[0], product.name].filter(Boolean);
+
+  const handleAddToCart = (event) => {
+    event.preventDefault();
     addToCart(product, {
       color: selectedColor || null,
       size: selectedSize || null,
@@ -42,225 +71,244 @@ function ProductDetail() {
     });
   };
 
-  const discount = product.salePrice
-    ? Math.round(((product.price - product.salePrice) / product.price) * 100)
-    : 0;
-
-  const has3D = Boolean(product.modelUrl);
-
   const normalizeQuantity = (next) => {
     const parsed = Number(next);
     if (!Number.isFinite(parsed)) return 1;
     return Math.min(50, Math.max(1, parsed));
   };
 
+  const handleImageMouseMove = (event) => {
+    if (!isHoverZoomed) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = ((event.clientX - rect.left) / rect.width) * 100;
+    const y = ((event.clientY - rect.top) / rect.height) * 100;
+    setZoomOrigin(`${x}% ${y}%`);
+  };
+
   return (
-    <section className="shell py-8">
-      <button
-        onClick={() => navigate('/')}
-        className="mb-6 text-sm font-semibold text-blue-700 hover:text-blue-500 transition"
-      >
-        ← Back to products
-      </button>
-
-      <div className="grid grid-cols-1 gap-10 lg:grid-cols-2">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
-          <div className="mb-4 flex gap-2">
-            <button
-              onClick={() => setActiveView('image')}
-              className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
-                activeView === 'image' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700'
-              }`}
-            >
-              Image View
-            </button>
-            <button
-              onClick={() => has3D && setActiveView('3d')}
-              className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
-                activeView === '3d' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'
-              } ${has3D ? '' : 'cursor-not-allowed opacity-50'}`}
-              disabled={!has3D}
-            >
-              3D Viewer
-            </button>
-          </div>
-
-          <div className="overflow-hidden rounded-xl bg-slate-100">
-            {activeView === '3d' && has3D ? (
-              <model-viewer
-                src={product.modelUrl}
-                alt={`${product.name} 3D model`}
-                camera-controls
-                auto-rotate
-                ar
-                shadow-intensity="1"
-                style={{ width: '100%', height: '420px', backgroundColor: '#f1f5f9' }}
-              >
-                <div slot="poster" className="flex h-full items-center justify-center text-slate-600">
-                  Loading 3D model...
+    <div className="bg-white pb-10">
+      <div className="pt-6">
+        <div className="shell px-2 sm:px-4">
+          <BackButton className="mb-4" />
+        </div>
+        <nav aria-label="Breadcrumb" className="shell">
+          <ol className="mx-auto flex max-w-7xl items-center space-x-2 px-2 sm:px-4">
+            {breadcrumbs.map((crumb, idx) => (
+              <li key={`${crumb}-${idx}`}>
+                <div className="flex items-center">
+                  <button
+                    type="button"
+                    onClick={() => (idx < breadcrumbs.length - 1 ? navigate('/products-by-industry') : null)}
+                    className={`mr-2 text-sm font-medium ${idx < breadcrumbs.length - 1 ? 'text-slate-900 hover:text-primary' : 'text-slate-500'}`}
+                  >
+                    {crumb}
+                  </button>
+                  {idx < breadcrumbs.length - 1 && (
+                    <svg viewBox="0 0 16 20" width="16" height="20" fill="currentColor" aria-hidden="true" className="h-5 w-4 text-slate-300">
+                      <path d="M5.697 4.34L8.98 16.532h1.327L7.025 4.341H5.697z" />
+                    </svg>
+                  )}
                 </div>
-              </model-viewer>
-            ) : product.image ? (
+              </li>
+            ))}
+          </ol>
+        </nav>
+
+        <div className="shell mx-auto mt-6 max-w-7xl px-2 sm:px-4 lg:grid lg:grid-cols-2 lg:gap-10">
+          <div>
+            <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
               <img
-                src={product.image}
-                alt={product.name}
-                className="h-[420px] w-full object-cover"
+                src={selectedImage}
+                alt={`${product.name} angle ${selectedImageIndex + 1}`}
+                className={`h-[380px] w-full object-cover transition duration-200 sm:h-[480px] lg:h-[560px] ${
+                  isHoverZoomed ? 'scale-[1.9] cursor-zoom-out' : 'scale-100 cursor-zoom-in'
+                }`}
+                style={{ transformOrigin: zoomOrigin }}
+                onMouseEnter={() => setIsHoverZoomed(true)}
+                onMouseMove={handleImageMouseMove}
+                onMouseLeave={() => {
+                  setIsHoverZoomed(false);
+                  setZoomOrigin('50% 50%');
+                }}
               />
+            </div>
+            <p className="mt-2 text-xs text-slate-500">Hover image to zoom, move cursor to inspect details.</p>
+
+            {gallery.length > 1 && (
+              <div className="mt-3 flex flex-wrap gap-2">
+                {gallery.map((image, idx) => (
+                  <button
+                    key={`thumb-${idx}`}
+                    type="button"
+                    onClick={() => setSelectedImageIndex(idx)}
+                    className={`overflow-hidden rounded-md border-2 transition ${
+                      selectedImageIndex === idx ? 'border-primary' : 'border-slate-200 hover:border-slate-300'
+                    }`}
+                    aria-label={`View angle ${idx + 1}`}
+                  >
+                    <img
+                      src={image}
+                      alt={`${product.name} thumbnail ${idx + 1}`}
+                      className="h-16 w-16 object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {gallery.length > 1 ? (
+              <p className="mt-3 text-sm font-medium text-slate-600">
+                Viewing angle {selectedImageIndex + 1} of {gallery.length}
+              </p>
             ) : (
-              <div className="flex h-[420px] items-center justify-center text-slate-500">No image available</div>
+              <p className="mt-3 text-sm text-slate-500">
+                Add `galleryImages` to this product to enable multi-angle view.
+              </p>
             )}
           </div>
 
-          <p className="mt-3 text-xs font-medium text-slate-500">
-            {has3D ? '3D tip: drag to rotate, scroll to zoom.' : '3D model not available for this product yet.'}
-          </p>
-        </div>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{product.name}</h1>
+            <p className="mt-4 text-3xl tracking-tight text-slate-900">${unitPrice}</p>
 
-        <div>
-          <h1 className="mb-4 text-4xl font-bold text-slate-900">{product.name}</h1>
-
-          {product.categories?.length > 0 && (
-            <div className="mb-6 flex flex-wrap gap-2">
-              {product.categories.map((cat) => (
-                <span key={cat} className="rounded-full bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-700">
-                  {cat}
-                </span>
-              ))}
+            <div className="mt-4 flex items-center">
+              <div className="flex items-center">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <UiIcon key={i} name="star" className={`h-5 w-5 ${i < uiConfig.rating ? 'text-slate-900' : 'text-slate-200'}`} />
+                ))}
+              </div>
+              <button type="button" className="ml-3 text-sm font-medium text-primary hover:text-red-700">
+                {uiConfig.reviewCount} reviews
+              </button>
             </div>
-          )}
 
-          <p className="mb-6 text-lg leading-relaxed text-slate-700">{product.description}</p>
-
-          <div className="mb-6 rounded-xl border border-slate-200 p-5">
-            <h3 className="mb-4 text-sm font-bold uppercase tracking-[0.12em] text-slate-600">Order Options</h3>
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <form className="mt-8" onSubmit={handleAddToCart}>
               {product.colors?.length > 0 && (
                 <div>
-                  <label className="mb-1 block text-sm font-semibold text-slate-700">Color</label>
-                  <select
-                    value={selectedColor}
-                    onChange={(e) => setSelectedColor(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
-                  >
-                    {product.colors.map((color) => (
-                      <option key={color} value={color}>
-                        {color}
-                      </option>
-                    ))}
-                  </select>
+                  <h3 className="text-sm font-medium text-slate-900">Color</h3>
+                  <fieldset aria-label="Choose a color" className="mt-4">
+                    <div className="flex items-center gap-x-3">
+                      {product.colors.map((color) => {
+                        const checked = selectedColor === color;
+                        return (
+                          <label key={color} className="flex rounded-full outline -outline-offset-1 outline-black/10">
+                            <input
+                              type="radio"
+                              name="color"
+                              value={color}
+                              checked={checked}
+                              onChange={() => setSelectedColor(color)}
+                              aria-label={color}
+                              className="h-8 w-8 appearance-none rounded-full border border-slate-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                              style={{
+                                backgroundColor: swatchColor(color),
+                                outline: checked ? '2px solid #C41E3A' : 'none',
+                                outlineOffset: '2px',
+                              }}
+                            />
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </fieldset>
                 </div>
               )}
 
               {product.sizes?.length > 0 && (
-                <div>
-                  <label className="mb-1 block text-sm font-semibold text-slate-700">Size</label>
-                  <select
-                    value={selectedSize}
-                    onChange={(e) => setSelectedSize(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
-                  >
-                    {product.sizes.map((size) => (
-                      <option key={size} value={size}>
-                        {size}
-                      </option>
-                    ))}
-                  </select>
+                <div className="mt-8">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-medium text-slate-900">Size</h3>
+                    <button type="button" className="text-sm font-medium text-primary hover:text-red-700">Size guide</button>
+                  </div>
+
+                  <fieldset aria-label="Choose a size" className="mt-4">
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                      {product.sizes.map((size) => {
+                        const checked = selectedSize === size;
+                        return (
+                          <label
+                            key={size}
+                            aria-label={size}
+                            className={`group relative flex items-center justify-center rounded-md border p-3 ${
+                              checked ? 'border-primary bg-primary text-white' : 'border-slate-300 bg-white text-slate-900'
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name="size"
+                              checked={checked}
+                              onChange={() => setSelectedSize(size)}
+                              className="absolute inset-0 appearance-none focus:outline-none"
+                            />
+                            <span className="text-sm font-medium uppercase">{size}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </fieldset>
                 </div>
               )}
-            </div>
 
-            <div className="mt-4">
-              <label className="mb-1 block text-sm font-semibold text-slate-700">Quantity</label>
-              <div className="inline-flex items-center rounded-lg border border-slate-300">
-                <button
-                  onClick={() => setQuantity((prev) => normalizeQuantity(prev - 1))}
-                  className="px-3 py-2 text-slate-700"
-                  type="button"
-                >
-                  −
-                </button>
-                <input
-                  type="number"
-                  min="1"
-                  max="50"
-                  value={quantity}
-                  onChange={(e) => setQuantity(normalizeQuantity(e.target.value))}
-                  className="w-16 border-x border-slate-300 px-2 py-2 text-center focus:outline-none"
-                />
-                <button
-                  onClick={() => setQuantity((prev) => normalizeQuantity(prev + 1))}
-                  className="px-3 py-2 text-slate-700"
-                  type="button"
-                >
-                  +
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="mb-7 rounded-xl border border-slate-200 p-5">
-            {product.salePrice ? (
-              <div className="flex items-center gap-4">
-                <div>
-                  <p className="text-lg text-slate-400 line-through">${product.price}</p>
-                  <p className="text-4xl font-extrabold text-slate-900">${product.salePrice}</p>
+              <div className="mt-8">
+                <label className="mb-1 block text-sm font-semibold text-slate-700">Quantity</label>
+                <div className="inline-flex items-center rounded-lg border border-slate-300">
+                  <button
+                    onClick={() => setQuantity((prev) => normalizeQuantity(prev - 1))}
+                    className="px-3 py-2 text-slate-700"
+                    type="button"
+                  >
+                    -
+                  </button>
+                  <input
+                    type="number"
+                    min="1"
+                    max="50"
+                    value={quantity}
+                    onChange={(e) => setQuantity(normalizeQuantity(e.target.value))}
+                    className="w-16 border-x border-slate-300 px-2 py-2 text-center focus:outline-none"
+                  />
+                  <button
+                    onClick={() => setQuantity((prev) => normalizeQuantity(prev + 1))}
+                    className="px-3 py-2 text-slate-700"
+                    type="button"
+                  >
+                    +
+                  </button>
                 </div>
-                <span className="rounded-lg bg-emerald-500 px-3 py-2 text-sm font-bold text-white">
-                  Save {discount}%
-                </span>
               </div>
-            ) : (
-              <p className="text-4xl font-extrabold text-slate-900">${product.price}</p>
-            )}
-            <p className="mt-2 text-sm text-slate-600">Line total: ${(unitPrice * quantity).toFixed(2)}</p>
-          </div>
 
-          <button
-            onClick={handleAddToCart}
-            className="w-full rounded-xl bg-slate-900 px-6 py-4 text-lg font-bold text-white transition hover:bg-red-700"
-          >
-            Add to Cart
-          </button>
+              <button
+                type="submit"
+                className="mt-10 flex w-full items-center justify-center rounded-md border border-transparent bg-primary px-8 py-3 text-base font-medium text-white hover:bg-red-700"
+              >
+                Add to bag
+              </button>
+            </form>
 
-          <div className="mt-7 rounded-xl bg-slate-100 p-5">
-            <h3 className="mb-3 text-sm font-bold uppercase tracking-[0.12em] text-slate-600">Detailed Information</h3>
-            <div className="grid grid-cols-1 gap-2 text-sm text-slate-700 sm:grid-cols-2">
-              {product.material && <p><strong>Material:</strong> {product.material}</p>}
-              {product.finish && <p><strong>Finish:</strong> {product.finish}</p>}
-              {product.warranty && <p><strong>Warranty:</strong> {product.warranty}</p>}
-              {product.leadTime && <p><strong>Lead Time:</strong> {product.leadTime}</p>}
+            <div className="mt-10">
+              <p className="text-base text-slate-900">{product.description}</p>
             </div>
 
             {product.specs && (
-              <div className="mt-4">
-                <h4 className="mb-2 text-sm font-bold text-slate-800">Specifications</h4>
-                <ul className="space-y-1 text-sm text-slate-700">
-                  {Object.entries(product.specs).map(([key, value]) => (
-                    <li key={key}>
-                      <strong>{key.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase())}:</strong> {value}
-                    </li>
-                  ))}
-                </ul>
+              <div className="mt-10">
+                <h3 className="text-sm font-medium text-slate-900">Highlights</h3>
+                <div className="mt-4">
+                  <ul className="list-disc space-y-2 pl-4 text-sm">
+                    {Object.entries(product.specs).map(([key, value]) => (
+                      <li key={key} className="text-slate-400">
+                        <span className="text-slate-600">
+                          {key.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase())}: {value}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
             )}
           </div>
-
-          {product.industries?.length > 0 && (
-            <div className="mt-6 rounded-xl bg-slate-100 p-5">
-              <h3 className="mb-3 text-sm font-bold uppercase tracking-[0.12em] text-slate-600">Ideal for</h3>
-              <div className="flex flex-wrap gap-2">
-                {product.industries.map((industry) => (
-                  <span key={industry} className="rounded-full bg-white px-3 py-1 text-sm font-medium text-slate-700">
-                    {industry}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
-    </section>
+    </div>
   );
 }
 

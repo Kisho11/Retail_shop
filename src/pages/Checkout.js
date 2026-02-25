@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useOrders } from '../context/OrderContext';
 import UiIcon from '../components/UiIcon';
+import BackButton from '../components/BackButton';
 
 function Checkout() {
   const navigate = useNavigate();
@@ -32,8 +33,9 @@ function Checkout() {
 
   if (cartItems.length === 0 && !orderPlaced) {
     return (
-      <div className="container mx-auto p-8 text-center py-16">
-        <h1 className="text-4xl font-bold text-primary mb-4">Checkout</h1>
+      <div className="container mx-auto px-4 py-16 text-center sm:px-8">
+        <BackButton className="mb-6" />
+        <h1 className="text-3xl sm:text-4xl font-bold text-primary mb-4">Checkout</h1>
         <p className="text-lg text-gray-600 mb-6">Your cart is empty</p>
         <button
           onClick={() => navigate('/')}
@@ -112,12 +114,13 @@ function Checkout() {
 
   if (orderPlaced) {
     return (
-      <div className="container mx-auto p-8 text-center py-16">
+      <div className="container mx-auto px-4 py-16 text-center sm:px-8">
+        <BackButton className="mb-6" />
         <div className="max-w-md mx-auto bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-500 rounded-xl p-12 shadow-xl">
           <div className="mb-6 flex justify-center animate-bounce">
             <UiIcon name="check" className="h-14 w-14 text-green-700" strokeWidth={2.5} />
           </div>
-          <h1 className="text-4xl font-bold text-green-700 mb-4">Order Confirmed!</h1>
+          <h1 className="text-3xl sm:text-4xl font-bold text-green-700 mb-4">Order Confirmed!</h1>
           <p className="text-gray-700 mb-4 text-lg">
             Thank you for your purchase. Your order has been successfully placed.
           </p>
@@ -152,8 +155,9 @@ function Checkout() {
   }
 
   return (
-    <div className="container mx-auto p-8">
-      <h1 className="text-4xl font-bold text-primary mb-8">Checkout</h1>
+    <div className="container mx-auto px-4 py-8 sm:px-8">
+      <BackButton className="mb-4" />
+      <h1 className="text-3xl sm:text-4xl font-bold text-primary mb-8">Checkout</h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Checkout Form */}
