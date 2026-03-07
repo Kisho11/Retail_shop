@@ -4,15 +4,18 @@ import Slider from '../components/Slider';
 import Categories from '../components/Categories';
 import { useLanguage } from '../context/LanguageContext';
 
+const logos = [
+  { src: '/clilogs/BudgensLogo.svg.png', alt: 'Budgens logo' },
+  { src: '/clilogs/Costcutter.png', alt: 'Costcutter logo' },
+  { src: '/clilogs/Londis-logo-m716zgtifbdvpw1dlya58d2y97d3i115ir467iufq0.png', alt: 'Londis logo' },
+  { src: '/clilogs/Night Presentation - Cover .png', alt: 'Night Presentation logo' },
+  { src: '/clilogs/Nisa_retailer-Logo.wine_.png', alt: 'Nisa logo' },
+  { src: '/clilogs/Spar-Logo.jpg', alt: 'SPAR logo' },
+  { src: '/clilogs/best-one-blue-logo.png', alt: 'Best-one logo' },
+];
+
 function Home() {
   const { t } = useLanguage();
-  const logos = [
-    { src: '/elmc/1.png', alt: 'Partner logo 1' },
-    { src: '/elmc/2.png', alt: 'Partner logo 2' },
-    { src: '/elmc/3.png', alt: 'Partner logo 3' },
-    { src: '/elmc/4.png', alt: 'Partner logo 4' },
-    { src: '/elmc/5.png', alt: 'Partner logo 5' },
-  ];
 
   return (
     <div className="pb-6">
@@ -55,7 +58,7 @@ function Home() {
           <div className="logo-track">
             {[...logos, ...logos].map((logo, index) => (
               <div key={`${logo.src}-${index}`} className="logo-item">
-                <img src={logo.src} alt={logo.alt} className="h-16 w-auto object-contain sm:h-20" />
+                <img src={logo.src} alt={logo.alt} className="logo-image" />
               </div>
             ))}
           </div>

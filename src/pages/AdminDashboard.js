@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useOrders } from '../context/OrderContext';
-import products from '../data/products';
+import { useProducts } from '../context/ProductContext';
 import ProductManagement from './ProductManagement';
 import CategoryManagement from './CategoryManagement';
 import ManagerManagement from './ManagerManagement';
@@ -13,8 +13,14 @@ function AdminDashboard() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { orders } = useOrders();
+  const { products } = useProducts();
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [customerMinOrders, setCustomerMinOrders] = useState(0);
+  const [customerSortBy, setCustomerSortBy] = useState('name');
+  const [customerSortDir, setCustomerSortDir] = useState('asc');
 
   const sortedOrders = [...orders].sort(
     (a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date)
@@ -22,10 +28,122 @@ function AdminDashboard() {
   const recentOrders = sortedOrders.slice(0, 5);
   const totalRevenue = orders.reduce((sum, order) => sum + (Number(order.amount) || 0), 0);
   const pendingOrders = orders.filter((order) => order.status === 'Pending').length;
+  const customerRows = useMemo(() => {
+    const grouped = new Map();
+    orders.forEach((order) => {
+      const customerName = order.customer || [order.customerFirstName, order.customerLastName].filter(Boolean).join(' ') || 'Unknown Customer';
+      const key = customerName.toLowerCase();
+      const addressObj = order.shippingAddress || {};
+      const address = [addressObj.address, addressObj.city, addressObj.state, addressObj.zipCode].filter(Boolean).join(', ') || 'N/A';
+
+      if (!grouped.has(key)) {
+        grouped.set(key, {
+          key,
+          name: customerName,
+          email: order.customerEmail || 'N/A',
+          phone: order.customerPhone || 'N/A',
+          address,
+          orders: [],
+        });
+      }
+
+      const row = grouped.get(key);
+      if (row.email === 'N/A' && order.customerEmail) row.email = order.customerEmail;
+      if (row.phone === 'N/A' && order.customerPhone) row.phone = order.customerPhone;
+      if (row.address === 'N/A' && address !== 'N/A') row.address = address;
+      row.orders.push(order);
+    });
+
+    return Array.from(grouped.values()).map((customer) => {
+      const totalSpent = customer.orders.reduce((sum, order) => sum + (Number(order.amount) || 0), 0);
+      const sortedCustomerOrders = [...customer.orders].sort(
+        (a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date)
+      );
+      const firstOrder = sortedCustomerOrders[sortedCustomerOrders.length - 1];
+      const lastOrder = sortedCustomerOrders[0];
+
+      return {
+        ...customer,
+        totalSpent,
+        orderCount: customer.orders.length,
+        joinDate: firstOrder?.date || 'N/A',
+        lastOrderDate: lastOrder?.date || 'N/A',
+        orderHistory: sortedCustomerOrders,
+      };
+    });
+  }, [orders]);
+  const filteredSortedCustomers = useMemo(() => {
+    const query = customerSearch.trim().toLowerCase();
+    const filtered = customerRows.filter((customer) => {
+      const matchesSearch =
+        !query ||
+        customer.name.toLowerCase().includes(query) ||
+        customer.email.toLowerCase().includes(query) ||
+        customer.address.toLowerCase().includes(query);
+      const matchesOrders = customer.orderCount >= Number(customerMinOrders || 0);
+      return matchesSearch && matchesOrders;
+    });
+
+    const sorted = [...filtered].sort((a, b) => {
+      let result = 0;
+      if (customerSortBy === 'orders') result = a.orderCount - b.orderCount;
+      else if (customerSortBy === 'spent') result = a.totalSpent - b.totalSpent;
+      else if (customerSortBy === 'joinDate') result = new Date(a.joinDate) - new Date(b.joinDate);
+      else if (customerSortBy === 'email') result = a.email.localeCompare(b.email);
+      else if (customerSortBy === 'address') result = a.address.localeCompare(b.address);
+      else result = a.name.localeCompare(b.name);
+      return customerSortDir === 'asc' ? result : -result;
+    });
+
+    return sorted;
+  }, [customerRows, customerSearch, customerMinOrders, customerSortBy, customerSortDir]);
+
+  const handleCustomerSort = (column) => {
+    if (customerSortBy === column) {
+      setCustomerSortDir((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+    setCustomerSortBy(column);
+    setCustomerSortDir('asc');
+  };
+
+  const renderSortIcon = (column) => {
+    const isActive = customerSortBy === column;
+    const isAsc = customerSortDir === 'asc';
+    const iconClass = `h-4 w-4 ${isActive ? 'text-primary' : 'text-gray-400'}`;
+
+    return (
+      <span className="inline-flex items-center justify-center">
+        {!isActive && (
+          <svg viewBox="0 0 24 24" className={`${iconClass} opacity-70`} fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <path d="M4 6h10M4 11h7M4 16h4" strokeLinecap="round" />
+            <path d="M18 5v14" strokeLinecap="round" />
+            <path d="m15 8 3-3 3 3M15 16l3 3 3-3" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )}
+        {isActive && isAsc && (
+          <svg viewBox="0 0 24 24" className={iconClass} fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <path d="M4 6h10M4 11h7M4 16h4" strokeLinecap="round" />
+            <path d="M18 18V6" strokeLinecap="round" />
+            <path d="m15 9 3-3 3 3" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )}
+        {isActive && !isAsc && (
+          <svg viewBox="0 0 24 24" className={iconClass} fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+            <path d="M4 6h10M4 11h7M4 16h4" strokeLinecap="round" />
+            <path d="M18 6v12" strokeLinecap="round" />
+            <path d="m15 15 3 3 3-3" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        )}
+      </span>
+    );
+  };
 
   // Mock data for statistics
   const stats = {
-    totalProducts: products.length,
+    availableProducts: products.filter(
+      (product) => Math.max((product.inventory?.onHand ?? 0) - (product.inventory?.reserved ?? 0), 0) > 0
+    ).length,
     totalOrders: orders.length,
     totalRevenue,
     totalCustomers: 856,
@@ -41,17 +159,23 @@ function AdminDashboard() {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Navbar */}
-      <nav className="bg-gradient-to-r from-primary to-black text-white p-4 shadow-lg">
+      <nav className="bg-red-600 text-white p-4 shadow-lg">
         <div className="container mx-auto flex justify-between items-center">
-          <h1 className="flex items-center gap-2 text-3xl font-bold text-accent">
-            <UiIcon name="userShield" className="h-8 w-8" />
-            Admin Dashboard
-          </h1>
+          <div className="flex items-center gap-3">
+            <img src="/elms.png" alt="Elamshelf logo" className="h-10 w-auto object-contain" />
+            <h1 className="text-3xl font-bold text-white">Admin Dashboard</h1>
+          </div>
           <div className="flex items-center gap-6">
             <div className="text-right">
               <p className="text-sm text-blue-100">Logged in as</p>
               <p className="font-bold">{user?.name}</p>
             </div>
+            <button
+              onClick={() => navigate('/')}
+              className="bg-white/15 hover:bg-white/25 text-white px-6 py-2 rounded-lg font-semibold transition"
+            >
+              Shop Home
+            </button>
             <button
               onClick={handleLogout}
               className="bg-blue-500 hover:bg-red-700 text-white px-6 py-2 rounded-lg font-semibold transition"
@@ -88,8 +212,8 @@ function AdminDashboard() {
               <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl shadow-md">
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="text-gray-600 text-sm">Total Products</p>
-                    <p className="text-4xl font-bold text-primary mt-2">{stats.totalProducts}</p>
+                    <p className="text-gray-600 text-sm">Available Products</p>
+                    <p className="text-4xl font-bold text-primary mt-2">{stats.availableProducts}</p>
                   </div>
                   <UiIcon name="box" className="h-10 w-10 text-primary" />
                 </div>
@@ -263,23 +387,95 @@ function AdminDashboard() {
               <UiIcon name="users" className="h-6 w-6" />
               Customers
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="border-2 border-gray-200 rounded-lg p-6 hover:shadow-lg transition">
-                  <div className="flex items-center gap-4 mb-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-primary to-blue-700 rounded-full"></div>
-                    <div>
-                      <p className="font-bold text-gray-800">Customer {i}</p>
-                      <p className="text-sm text-gray-600">customer{i}@email.com</p>
-                    </div>
-                  </div>
-                  <div className="space-y-2 text-sm text-gray-600">
-                    <p><strong>Orders:</strong> {Math.floor(Math.random() * 10) + 1}</p>
-                    <p><strong>Total Spent:</strong> ${(Math.random() * 5000 + 500).toFixed(2)}</p>
-                    <p><strong>Join Date:</strong> 2025-2026</p>
-                  </div>
-                </div>
-              ))}
+            <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+              <input
+                type="text"
+                value={customerSearch}
+                onChange={(e) => setCustomerSearch(e.target.value)}
+                placeholder="Filter by name, email, address"
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              />
+              <input
+                type="number"
+                min="0"
+                value={customerMinOrders}
+                onChange={(e) => setCustomerMinOrders(e.target.value)}
+                placeholder="Min orders"
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+              />
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="px-6 py-3 text-left font-semibold text-gray-700">
+                      <button type="button" onClick={() => handleCustomerSort('name')} className="inline-flex items-center gap-1 hover:text-primary">
+                        Customer
+                        {renderSortIcon('name')}
+                      </button>
+                    </th>
+                    <th className="px-6 py-3 text-left font-semibold text-gray-700">
+                      <button type="button" onClick={() => handleCustomerSort('email')} className="inline-flex items-center gap-1 hover:text-primary">
+                        Email
+                        {renderSortIcon('email')}
+                      </button>
+                    </th>
+                    <th className="px-6 py-3 text-left font-semibold text-gray-700">
+                      <button type="button" onClick={() => handleCustomerSort('address')} className="inline-flex items-center gap-1 hover:text-primary">
+                        Address
+                        {renderSortIcon('address')}
+                      </button>
+                    </th>
+                    <th className="px-6 py-3 text-left font-semibold text-gray-700">
+                      <button type="button" onClick={() => handleCustomerSort('orders')} className="inline-flex items-center gap-1 hover:text-primary">
+                        Orders
+                        {renderSortIcon('orders')}
+                      </button>
+                    </th>
+                    <th className="px-6 py-3 text-left font-semibold text-gray-700">
+                      <button type="button" onClick={() => handleCustomerSort('spent')} className="inline-flex items-center gap-1 hover:text-primary">
+                        Total Spent
+                        {renderSortIcon('spent')}
+                      </button>
+                    </th>
+                    <th className="px-6 py-3 text-left font-semibold text-gray-700">
+                      <button type="button" onClick={() => handleCustomerSort('joinDate')} className="inline-flex items-center gap-1 hover:text-primary">
+                        Join Date
+                        {renderSortIcon('joinDate')}
+                      </button>
+                    </th>
+                    <th className="px-6 py-3 text-left font-semibold text-gray-700">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredSortedCustomers.map((customer) => (
+                    <tr key={customer.key} className="border-b border-gray-200 hover:bg-gray-50">
+                      <td className="px-6 py-4 font-bold text-gray-800">{customer.name}</td>
+                      <td className="px-6 py-4 text-gray-600">{customer.email}</td>
+                      <td className="px-6 py-4 text-gray-600">{customer.address}</td>
+                      <td className="px-6 py-4 font-semibold text-gray-700">{customer.orderCount}</td>
+                      <td className="px-6 py-4 font-semibold text-gray-700">${customer.totalSpent.toFixed(2)}</td>
+                      <td className="px-6 py-4 text-gray-600">{customer.joinDate}</td>
+                      <td className="px-6 py-4">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedCustomer(customer)}
+                          className="text-blue-600 hover:text-blue-800 font-semibold"
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {filteredSortedCustomers.length === 0 && (
+                    <tr>
+                      <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
+                        No customers match the current filter.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
@@ -338,6 +534,62 @@ function AdminDashboard() {
         )}
 
         <OrderDetailsModal order={selectedOrder} onClose={() => setSelectedOrder(null)} accentClass="text-primary" />
+        {selectedCustomer && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setSelectedCustomer(null)}>
+            <div
+              className="w-full max-w-4xl rounded-xl bg-white p-6 shadow-xl"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="mb-5 flex items-start justify-between">
+                <div>
+                  <h3 className="text-2xl font-bold text-primary">{selectedCustomer.name}</h3>
+                  <p className="text-sm text-gray-600">Full customer details and order history</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedCustomer(null)}
+                  className="rounded border border-gray-300 px-3 py-1 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                >
+                  Close
+                </button>
+              </div>
+
+              <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <p className="text-sm text-gray-700"><span className="font-bold">Email:</span> {selectedCustomer.email}</p>
+                <p className="text-sm text-gray-700"><span className="font-bold">Phone:</span> {selectedCustomer.phone}</p>
+                <p className="text-sm text-gray-700 sm:col-span-2"><span className="font-bold">Address:</span> {selectedCustomer.address}</p>
+                <p className="text-sm text-gray-700"><span className="font-bold">Orders:</span> {selectedCustomer.orderCount}</p>
+                <p className="text-sm text-gray-700"><span className="font-bold">Total Spent:</span> ${selectedCustomer.totalSpent.toFixed(2)}</p>
+                <p className="text-sm text-gray-700"><span className="font-bold">Join Date:</span> {selectedCustomer.joinDate}</p>
+                <p className="text-sm text-gray-700"><span className="font-bold">Last Order:</span> {selectedCustomer.lastOrderDate}</p>
+              </div>
+
+              <h4 className="mb-3 text-lg font-bold text-gray-800">Order History</h4>
+              <div className="max-h-72 overflow-auto rounded-lg border border-gray-200">
+                <table className="w-full">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Order ID</th>
+                      <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Date</th>
+                      <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Status</th>
+                      <th className="px-4 py-2 text-left text-sm font-semibold text-gray-700">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedCustomer.orderHistory.map((order) => (
+                      <tr key={order.id} className="border-t border-gray-100">
+                        <td className="px-4 py-2 text-sm font-semibold text-primary">#{order.id}</td>
+                        <td className="px-4 py-2 text-sm text-gray-600">{order.date}</td>
+                        <td className="px-4 py-2 text-sm text-gray-700">{order.status}</td>
+                        <td className="px-4 py-2 text-sm font-semibold text-gray-800">${Number(order.amount || 0).toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

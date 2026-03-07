@@ -22,22 +22,25 @@ const industries = [
 function Navbar() {
   const [isIndustryOpen, setIsIndustryOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMobileIndustryOpen, setIsMobileIndustryOpen] = useState(false);
   const { getTotalItems } = useCart();
   const { isAuthenticated, user, logout } = useAuth();
   const { language, setLanguage, t } = useLanguage();
   const navigate = useNavigate();
   const industryMenuRef = useRef(null);
+  const cartItemCount = getTotalItems();
+  const desktopActionClass =
+    'inline-flex h-10 items-center justify-center rounded-full px-4 text-sm font-semibold transition';
 
   const navLinks = useMemo(() => {
     const base = [
-      { to: '/showroom', label: t('nav.showroom') },
+      { to: '/about', label: t('nav.about') },
       { to: '/clients', label: t('nav.clients') },
-      { to: '/reviews', label: t('nav.reviews') },
       { to: '/catalogue', label: t('nav.catalogue') },
     ];
 
     if (isAuthenticated && user?.role === 'customer') {
-      return [...base, { to: '/customer-portal', label: t('nav.myAccount') }];
+      return [...base, { to: '/categories', label: t('categories.categories') }];
     }
 
     return base;
@@ -46,6 +49,7 @@ function Navbar() {
   const handleNavigate = () => {
     setIsMobileMenuOpen(false);
     setIsIndustryOpen(false);
+    setIsMobileIndustryOpen(false);
   };
 
   const handleLogout = () => {
@@ -76,7 +80,7 @@ function Navbar() {
     <header className="sticky top-0 z-50 border-b border-slate-800 bg-black">
       <div className="bg-red-600 text-white">
         <div className="shell relative flex min-h-10 items-center justify-center py-2 text-xs font-semibold sm:text-sm">
-          <p className="text-center">{t('nav.limitedOffer')}</p>
+          <p className="mx-auto whitespace-nowrap text-center leading-tight">{t('nav.limitedOffer')}</p>
           <div className="absolute right-0 flex items-center gap-2">
             <div className="hidden items-center gap-3 sm:flex">
               <Link to="/catalogue" className="underline-offset-2 hover:underline">
@@ -110,18 +114,24 @@ function Navbar() {
           </div>
         </div>
         <div className="bg-red-700/90 px-3 py-2 text-center text-xs font-bold uppercase tracking-[0.08em] sm:text-sm">
-          <p className="blink-banner-text">{t('nav.banner')}</p>
+          <p className="blink-banner-text">
+            <span>SAME DAY PICK UP</span>
+            <span className="px-2 text-black">|</span>
+            <span>DELIVERY WITHIN 1 - 2 WORKING DAYS</span>
+            <span className="px-2 text-black">|</span>
+            <span>GET A QUOTE</span>
+          </p>
         </div>
       </div>
       <div className="shell">
         <div className="flex h-[72px] items-center justify-between gap-4">
           <Link to="/" aria-label="Go to home" className="block shrink-0 cursor-pointer" onClick={handleLogoClick}>
-            <img src="/elms.png" alt="Elamshelf logo" className="h-12 w-auto max-w-[150px] object-contain sm:h-14 sm:max-w-[190px] lg:h-16 lg:max-w-[240px]" />
+            <img src="/elms.png" alt="Elamshelf logo" className="h-12 w-auto max-w-[160px] object-contain sm:h-14 sm:max-w-[200px] lg:h-16 lg:max-w-[250px]" />
           </Link>
 
           <nav className="hidden flex-1 items-center justify-center gap-4 md:flex lg:gap-5">
             {navLinks.map((link) => (
-              <Link key={link.to} to={link.to} className="text-sm font-semibold text-slate-100 transition hover:text-primary">
+              <Link key={link.to} to={link.to} className="text-[20px] font-bold text-slate-100 transition hover:text-primary">
                 {link.label}
               </Link>
             ))}
@@ -129,7 +139,7 @@ function Navbar() {
             <div className="relative" ref={industryMenuRef}>
               <button
                 onClick={() => setIsIndustryOpen((prev) => !prev)}
-                className="text-sm font-semibold text-slate-100 transition hover:text-primary"
+                className="text-[20px] font-bold text-slate-100 transition hover:text-primary"
               >
                 {t('nav.industries')}
               </button>
@@ -155,34 +165,30 @@ function Navbar() {
               <>
                 <Link
                   to="/login?mode=customer-signin"
-                  className="rounded-full border border-slate-500 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:border-red-300 hover:text-primary"
+                  className={`${desktopActionClass} border border-slate-500 text-slate-100 hover:border-red-300 hover:text-primary`}
                 >
                   {t('nav.signIn')}
                 </Link>
                 <Link
                   to="/signup"
-                  className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700"
+                  className={`${desktopActionClass} bg-primary text-white hover:bg-red-700`}
                 >
                   {t('nav.signUp')}
                 </Link>
               </>
             ) : (
               <>
-                <span className="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-semibold text-slate-700">
-                  {user?.name || 'User'} ({user?.role || 'account'})
-                </span>
-
                 {user?.role === 'customer' ? (
                   <Link
                     to="/customer-portal"
-                    className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700"
+                    className={`${desktopActionClass} bg-primary text-white hover:bg-red-700`}
                   >
                     {t('nav.myAccount')}
                   </Link>
                 ) : (
                   <Link
                     to={user?.role === 'admin' ? '/admin/dashboard' : '/manager/dashboard'}
-                    className="rounded-full border border-slate-500 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:border-red-300 hover:text-primary"
+                    className={`${desktopActionClass} border border-slate-500 text-slate-100 hover:border-red-300 hover:text-primary`}
                   >
                     {user?.role === 'admin' ? t('nav.adminPortal') : t('nav.managerPortal')}
                   </Link>
@@ -190,7 +196,7 @@ function Navbar() {
 
                 <button
                   onClick={handleLogout}
-                  className="rounded-full border border-slate-500 px-4 py-2 text-sm font-semibold text-slate-100 transition hover:bg-slate-800"
+                  className={`${desktopActionClass} border border-slate-500 text-slate-100 hover:bg-slate-800`}
                 >
                   {t('nav.logout')}
                 </button>
@@ -199,7 +205,7 @@ function Navbar() {
 
             <Link
               to="/cart"
-              className="relative inline-flex items-center gap-2 rounded-full bg-slate-800 px-4 py-2 text-sm font-bold text-white transition hover:bg-slate-700"
+              className="relative inline-flex h-10 items-center gap-2 rounded-full bg-slate-800 px-4 text-sm font-bold text-white transition hover:bg-slate-700"
             >
               <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
                 <circle cx="9" cy="20" r="1.5" />
@@ -207,9 +213,9 @@ function Navbar() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h2l2.2 10.2a1 1 0 0 0 1 .8h8.9a1 1 0 0 0 1-.8L20 8H7" />
               </svg>
               {t('nav.cart')}
-              {getTotalItems() > 0 && (
+              {cartItemCount > 0 && (
                 <span className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-white">
-                  {getTotalItems()}
+                  {cartItemCount}
                 </span>
               )}
             </Link>
@@ -229,7 +235,10 @@ function Navbar() {
               </svg>
             </Link>
             <button
-              onClick={() => setIsMobileMenuOpen((prev) => !prev)}
+              onClick={() => {
+                setIsMobileMenuOpen((prev) => !prev);
+                setIsMobileIndustryOpen(false);
+              }}
               className="rounded-lg border border-slate-500 p-2 text-white"
               aria-label="Toggle menu"
             >
@@ -253,7 +262,10 @@ function Navbar() {
               </svg>
             </Link>
             <button
-              onClick={() => setIsMobileMenuOpen((prev) => !prev)}
+              onClick={() => {
+                setIsMobileMenuOpen((prev) => !prev);
+                setIsMobileIndustryOpen(false);
+              }}
               className="rounded-lg border border-slate-500 p-2 text-white"
               aria-label="Toggle menu"
             >
@@ -278,18 +290,33 @@ function Navbar() {
             ))}
 
             <div className="rounded-xl bg-slate-50 p-3">
-              <p className="mb-2 text-xs font-bold uppercase tracking-[0.12em] text-slate-500">{t('nav.industries')}</p>
-              <div className="grid grid-cols-2 gap-2">
-                {industries.slice(0, 8).map((industry) => (
-                  <Link
-                    key={industry.key}
-                    to={`/products-by-industry/${industry.slug}`}
-                    className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-700"
-                    onClick={handleNavigate}
-                  >
-                    {t(`nav.industry.${industry.key}`)}
-                  </Link>
-                ))}
+              <button
+                type="button"
+                onClick={() => setIsMobileIndustryOpen((prev) => !prev)}
+                className="flex w-full items-center justify-between rounded-lg px-1 py-1 text-left"
+                aria-expanded={isMobileIndustryOpen}
+                aria-controls="mobile-industries-submenu"
+              >
+                <span className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">{t('nav.industries')}</span>
+                <span className="text-base font-bold text-slate-600">{isMobileIndustryOpen ? '−' : '+'}</span>
+              </button>
+
+              <div
+                id="mobile-industries-submenu"
+                className={`overflow-hidden transition-all duration-200 ${isMobileIndustryOpen ? 'mt-2 max-h-96' : 'max-h-0'}`}
+              >
+                <div className="grid grid-cols-2 gap-2">
+                  {industries.map((industry) => (
+                    <Link
+                      key={industry.key}
+                      to={`/products-by-industry/${industry.slug}`}
+                      className="rounded-md border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-700"
+                      onClick={handleNavigate}
+                    >
+                      {t(`nav.industry.${industry.key}`)}
+                    </Link>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -312,10 +339,6 @@ function Navbar() {
               </div>
             ) : (
               <div className="space-y-3 pt-2">
-                <div className="rounded-lg bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700">
-                  {user?.name || 'User'} ({user?.role || 'account'})
-                </div>
-
                 {user?.role === 'customer' ? (
                   <Link
                     to="/customer-portal"
@@ -354,7 +377,7 @@ function Navbar() {
                   <circle cx="17" cy="20" r="1.5" />
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h2l2.2 10.2a1 1 0 0 0 1 .8h8.9a1 1 0 0 0 1-.8L20 8H7" />
                 </svg>
-                {t('nav.cart')} ({getTotalItems()})
+                {t('nav.cart')} ({cartItemCount})
               </Link>
             </div>
           </div>

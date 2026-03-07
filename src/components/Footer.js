@@ -50,9 +50,12 @@ function Footer() {
                     <circle cx="12" cy="10" r="2.2" />
                   </svg>
                 </span>
-                <p className="flex-1 text-left text-lg font-bold leading-relaxed text-white sm:text-xl">
-                  Elmshelf Pvt Ltd, 3 Langley Cl, Romford RM3 8XB
-                </p>
+                <a
+                  href="geo:0,0?q=Elmshelf, 3 Langley Cl, Romford RM3 8XB"
+                  className="flex-1 text-left text-lg font-bold leading-relaxed text-white no-underline transition hover:text-red-300 hover:no-underline sm:text-xl"
+                >
+                  Elmshelf, 3 Langley Cl, Romford RM3 8XB
+                </a>
               </div>
 
               <div className="flex w-full items-center gap-3">
@@ -61,9 +64,17 @@ function Footer() {
                     <path d="M6.62 10.79a15.06 15.06 0 0 0 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.56 0 1 .45 1 1V20a1 1 0 0 1-1 1C10.85 21 3 13.15 3 3a1 1 0 0 1 1-1h3.5c.55 0 1 .44 1 1 0 1.24.2 2.45.57 3.57.11.35.03.75-.25 1.02l-2.2 2.2Z" />
                   </svg>
                 </span>
-                <a href="tel:01708594024" className="flex-1 text-left text-2xl font-extrabold text-primary transition hover:text-red-400 sm:text-3xl">
+                <a href="tel:01708594024" className="flex-1 text-left text-2xl font-extrabold text-primary no-underline transition hover:text-red-400 hover:no-underline sm:text-3xl">
                   01708 594024
                 </a>
+              </div>
+
+              <div className="flex justify-center pt-2 lg:justify-end">
+                <img
+                  src="/elms.png"
+                  alt="Elmshelf logo"
+                  className="h-16 w-auto max-w-[260px] object-contain sm:h-20 sm:max-w-[320px]"
+                />
               </div>
             </div>
           </div>

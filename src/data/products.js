@@ -2,6 +2,7 @@
 const products = [
   {
     id: 1,
+    productType: 'variable',
     name: 'Modular Shelf',
     description: 'Versatile modular shelving system for customizable retail displays.',
     price: 100,
@@ -24,6 +25,7 @@ const products = [
   },
   {
     id: 2,
+    productType: 'variable',
     name: 'Double Door Chiller',
     description: 'Energy-efficient refrigeration unit with double glass doors.',
     price: 500,
@@ -45,6 +47,7 @@ const products = [
   },
   {
     id: 3,
+    productType: 'variable',
     name: 'Vape Display Stand',
     description: 'Secure display stand for high-value products with custom lighting.',
     price: 200,
@@ -66,6 +69,7 @@ const products = [
   },
   {
     id: 4,
+    productType: 'simple',
     name: 'Black Vinyl Flooring',
     description: 'Heavy-duty carbon maxi fast track vinyl flooring in black.',
     price: 300,
@@ -86,6 +90,7 @@ const products = [
   },
   {
     id: 5,
+    productType: 'variable',
     name: 'Bakery & Bread Rack',
     description: 'Beautiful slatted wood display rack perfect for fresh bakery items.',
     price: 150,
@@ -106,6 +111,7 @@ const products = [
   },
   {
     id: 6,
+    productType: 'variable',
     name: 'Glass Display Counter',
     description: 'Premium glass counter for jewelry, tech accessories, and more.',
     price: 450,
@@ -126,6 +132,7 @@ const products = [
   },
   {
     id: 7,
+    productType: 'simple',
     name: 'Clothing Rack',
     description: 'Mobile heavy-duty clothing rack with adjustable height.',
     price: 85,
@@ -146,6 +153,7 @@ const products = [
   },
   {
     id: 8,
+    productType: 'variable',
     name: 'Gondola Shelving Unit',
     description: 'Double-sided freestanding aisle shelving for supermarkets.',
     price: 180,
@@ -167,6 +175,7 @@ const products = [
   },
   {
     id: 9,
+    productType: 'simple',
     name: 'Store Checkout Counter',
     description: 'Durable and spacious checkout counter with built-in storage.',
     price: 550,
@@ -187,6 +196,7 @@ const products = [
   },
   {
     id: 10,
+    productType: 'simple',
     name: 'Wall Bays',
     description: 'Integrated wall shelving units for maximum perimeter product display.',
     price: 120,
@@ -207,6 +217,7 @@ const products = [
   },
   {
     id: 11,
+    productType: 'custom',
     name: 'Off-Licence Back Bar Wall Unit',
     description: 'Tall reinforced wall bay system designed for spirits and premium bottle display.',
     price: 690,
@@ -229,6 +240,7 @@ const products = [
   },
   {
     id: 12,
+    productType: 'custom',
     name: 'Security Till Counter with Gate',
     description: 'Compact checkout station with lockable cabinet and side swing-gate for controlled exits.',
     price: 840,
@@ -250,6 +262,7 @@ const products = [
   },
   {
     id: 13,
+    productType: 'custom',
     name: 'Cigarette Gantry Unit',
     description: 'High-capacity tobacco gantry with adjustable shelves and shutter-ready frame.',
     price: 510,
@@ -271,6 +284,7 @@ const products = [
   },
   {
     id: 14,
+    productType: 'variable',
     name: 'Wine & Spirits Island Gondola',
     description: 'Center-floor gondola system with bottle rails, promo end caps, and anti-slip decks.',
     price: 760,

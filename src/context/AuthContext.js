@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 const AuthContext = createContext();
 
@@ -68,12 +68,12 @@ export function AuthProvider({ children }) {
     role: 'manager',
   };
 
-  const setSession = (sessionUser) => {
+  const setSession = useCallback((sessionUser) => {
     setUser(sessionUser);
     setIsAuthenticated(true);
-  };
+  }, []);
 
-  const login = (email, password) => {
+  const login = useCallback((email, password) => {
     if (email === ADMIN_CREDENTIALS.email && password === ADMIN_CREDENTIALS.password) {
       const adminUser = {
         id: 1,
@@ -99,9 +99,9 @@ export function AuthProvider({ children }) {
     }
 
     return { success: false, error: 'Invalid staff email or password' };
-  };
+  }, [ADMIN_CREDENTIALS.email, ADMIN_CREDENTIALS.password, MANAGER_CREDENTIALS.email, MANAGER_CREDENTIALS.password, setSession]);
 
-  const signUpCustomer = ({ name, email, password }) => {
+  const signUpCustomer = useCallback(({ name, email, password }) => {
     const normalizedEmail = email.trim().toLowerCase();
 
     if (customerUsers.some((item) => item.email.toLowerCase() === normalizedEmail)) {
@@ -130,9 +130,9 @@ export function AuthProvider({ children }) {
 
     setSession(customerSession);
     return { success: true, user: customerSession };
-  };
+  }, [customerUsers, setSession]);
 
-  const signInCustomer = (email, password) => {
+  const signInCustomer = useCallback((email, password) => {
     const normalizedEmail = email.trim().toLowerCase();
     const existing = customerUsers.find(
       (item) => item.email.toLowerCase() === normalizedEmail && item.password === password
@@ -153,9 +153,9 @@ export function AuthProvider({ children }) {
 
     setSession(customerSession);
     return { success: true, user: customerSession };
-  };
+  }, [customerUsers, setSession]);
 
-  const authWithGoogle = (credential, mode = 'signin') => {
+  const authWithGoogle = useCallback((credential, mode = 'signin') => {
     const profile = decodeGoogleCredential(credential);
 
     if (!profile?.email) {
@@ -198,60 +198,80 @@ export function AuthProvider({ children }) {
 
     setSession(customerSession);
     return { success: true, user: customerSession };
-  };
+  }, [customerUsers, setSession]);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setUser(null);
     setIsAuthenticated(false);
-  };
+  }, []);
 
-  const isAdmin = () => user?.role === 'admin';
-  const isManager = () => user?.role === 'manager';
-  const isCustomer = () => user?.role === 'customer';
-  const isAdminOrManager = () => user?.role === 'admin' || user?.role === 'manager';
+  const isAdmin = useCallback(() => user?.role === 'admin', [user]);
+  const isManager = useCallback(() => user?.role === 'manager', [user]);
+  const isCustomer = useCallback(() => user?.role === 'customer', [user]);
+  const isAdminOrManager = useCallback(() => user?.role === 'admin' || user?.role === 'manager', [user]);
 
-  const addManager = (managerData) => {
+  const addManager = useCallback((managerData) => {
     const newManager = {
       ...managerData,
       id: Math.max(...managers.map((m) => m.id), 1) + 1,
       joinDate: new Date().toISOString().split('T')[0],
       status: 'Active',
     };
-    setManagers([...managers, newManager]);
+    setManagers((prev) => [...prev, newManager]);
     return newManager;
-  };
+  }, [managers]);
 
-  const updateManager = (managerId, updatedData) => {
-    setManagers(managers.map((m) => (m.id === managerId ? { ...m, ...updatedData } : m)));
-  };
+  const updateManager = useCallback((managerId, updatedData) => {
+    setManagers((prev) => prev.map((m) => (m.id === managerId ? { ...m, ...updatedData } : m)));
+  }, []);
 
-  const deleteManager = (managerId) => {
-    setManagers(managers.filter((m) => m.id !== managerId));
-  };
+  const deleteManager = useCallback((managerId) => {
+    setManagers((prev) => prev.filter((m) => m.id !== managerId));
+  }, []);
 
-  const getManagerById = (managerId) => managers.find((m) => m.id === managerId);
+  const getManagerById = useCallback((managerId) => managers.find((m) => m.id === managerId), [managers]);
+
+  const value = useMemo(
+    () => ({
+      user,
+      isAuthenticated,
+      login,
+      signUpCustomer,
+      signInCustomer,
+      authWithGoogle,
+      logout,
+      isAdmin,
+      isManager,
+      isCustomer,
+      isAdminOrManager,
+      managers,
+      addManager,
+      updateManager,
+      deleteManager,
+      getManagerById,
+    }),
+    [
+      user,
+      isAuthenticated,
+      login,
+      signUpCustomer,
+      signInCustomer,
+      authWithGoogle,
+      logout,
+      isAdmin,
+      isManager,
+      isCustomer,
+      isAdminOrManager,
+      managers,
+      addManager,
+      updateManager,
+      deleteManager,
+      getManagerById,
+    ]
+  );
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isAuthenticated,
-        login,
-        signUpCustomer,
-        signInCustomer,
-        authWithGoogle,
-        logout,
-        isAdmin,
-        isManager,
-        isCustomer,
-        isAdminOrManager,
-        managers,
-        addManager,
-        updateManager,
-        deleteManager,
-        getManagerById,
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

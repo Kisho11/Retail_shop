@@ -1,17 +1,39 @@
-import React, { createContext, useContext, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import initialProducts from '../data/products';
 
 const ProductContext = createContext();
 
 const initialCategories = [
   { name: 'Shop Shelving', image: '/wall-bays.jpg' },
+  { name: 'Shop Counters', image: '/store-counter.jpg' },
   { name: 'Refrigeration', image: '/chiller.jpg' },
-  { name: 'Displays', image: '/glass-counter.jpg' },
-  { name: 'Flooring', image: '/flooring.jpg' },
-  { name: 'Checkout', image: '/store-counter.jpg' },
-  { name: 'Accessories', image: '/modular-shelf.jpg' },
+  { name: 'Fruit & Veg Shelving', image: '/wall-bays.jpg' },
+  { name: 'Retail Shop Displays', image: '/glass-counter.jpg' },
+  { name: 'Bakery & Bread Shelving', image: '/wall-bays.jpg' },
   { name: 'Slatwall Panels', image: '/wall-bays.jpg' },
-  { name: 'Off-Licence Fittings', image: '/store-counter.jpg' },
+  { name: 'Wall Panels', image: '/wall-bays.jpg' },
+  { name: 'Grid Ceilings', image: '/store-counter.jpg' },
+  { name: 'Flooring', image: '/flooring.jpg' },
+  { name: 'Shop Led Lights', image: '/glass-counter.jpg' },
+  { name: 'Tobacco & Vape Displays', image: '/glass-counter.jpg' },
+  { name: 'Baskets & Trolleys', image: '/store-counter.jpg' },
+  { name: 'Point Of Sale', image: '/store-counter.jpg' },
+  { name: 'Acrylic & Wire', image: '/modular-shelf.jpg' },
+  { name: 'Pick N Mix Displays', image: '/glass-counter.jpg' },
+  { name: 'AMX Shelving', image: '/wall-bays.jpg' },
+  { name: 'Clothing Display', image: '/modular-shelf.jpg' },
+  { name: 'Crisp & Snack Displays', image: '/glass-counter.jpg' },
+  { name: 'DIY & Tool Display', image: '/modular-shelf.jpg' },
+  { name: 'Epos Ticket Strips', image: '/store-counter.jpg' },
+  { name: 'Flower Display', image: '/glass-counter.jpg' },
+  { name: 'Risers & Dividers', image: '/modular-shelf.jpg' },
+  { name: 'Hooks', image: '/wall-bays.jpg' },
+  { name: 'Wine Display', image: '/glass-counter.jpg' },
+  { name: 'Security Products', image: '/store-counter.jpg' },
+  { name: 'Wire Dump Bins', image: '/modular-shelf.jpg' },
+  { name: 'News & Mags', image: '/store-counter.jpg' },
+  { name: 'Price Gun & Pricing', image: '/store-counter.jpg' },
+  { name: 'Displays & Accessories', image: '/glass-counter.jpg' },
 ];
 
 const getNowIso = () => new Date().toISOString();
@@ -83,20 +105,20 @@ export function ProductProvider({ children }) {
 
   const categoryNames = useMemo(() => categories.map((c) => c.name), [categories]);
 
-  const addProduct = (newProduct) => {
+  const addProduct = useCallback((newProduct) => {
     const nextId = Math.max(...products.map((p) => p.id), 0) + 1;
     const productWithId = {
       ...newProduct,
       id: nextId,
     };
     productWithId.inventory = normalizeInventory(productWithId);
-    setProducts([...products, productWithId]);
+    setProducts((prev) => [...prev, productWithId]);
     return productWithId;
-  };
+  }, [products]);
 
-  const updateProduct = (productId, updatedData) => {
-    setProducts(
-      products.map((p) => {
+  const updateProduct = useCallback((productId, updatedData) => {
+    setProducts((prev) =>
+      prev.map((p) => {
         if (p.id !== productId) return p;
         const merged = { ...p, ...updatedData };
         merged.inventory = normalizeInventory({
@@ -109,17 +131,23 @@ export function ProductProvider({ children }) {
         return merged;
       })
     );
-  };
+  }, []);
 
-  const deleteProduct = (productId) => {
-    setProducts(products.filter((p) => p.id !== productId));
-  };
+  const deleteProduct = useCallback((productId) => {
+    setProducts((prev) => prev.filter((p) => p.id !== productId));
+  }, []);
 
-  const getProductById = (id) => products.find((p) => p.id === parseInt(id, 10));
+  const getProductById = useCallback(
+    (id) => products.find((p) => p.id === parseInt(id, 10)),
+    [products]
+  );
 
-  const getProductsByCategory = (category) => products.filter((p) => p.categories.includes(category));
+  const getProductsByCategory = useCallback(
+    (category) => products.filter((p) => p.categories.includes(category)),
+    [products]
+  );
 
-  const addCategory = (categoryData) => {
+  const addCategory = useCallback((categoryData) => {
     const payload =
       typeof categoryData === 'string'
         ? { name: categoryData.trim(), image: '' }
@@ -130,15 +158,15 @@ export function ProductProvider({ children }) {
     const exists = categories.some((c) => c.name.toLowerCase() === payload.name.toLowerCase());
     if (exists) return false;
 
-    setCategories([...categories, payload]);
+    setCategories((prev) => [...prev, payload]);
     return true;
-  };
+  }, [categories]);
 
-  const deleteCategory = (categoryName) => {
-    setCategories(categories.filter((c) => c.name !== categoryName));
-  };
+  const deleteCategory = useCallback((categoryName) => {
+    setCategories((prev) => prev.filter((c) => c.name !== categoryName));
+  }, []);
 
-  const updateCategory = (oldName, updatedCategoryData) => {
+  const updateCategory = useCallback((oldName, updatedCategoryData) => {
     const payload =
       typeof updatedCategoryData === 'string'
         ? { name: updatedCategoryData.trim(), image: '' }
@@ -147,15 +175,15 @@ export function ProductProvider({ children }) {
             image: updatedCategoryData.image?.trim() || '',
           };
 
-    setProducts(
-      products.map((p) => ({
+    setProducts((prev) =>
+      prev.map((p) => ({
         ...p,
         categories: p.categories.map((c) => (c === oldName ? payload.name : c)),
       }))
     );
 
-    setCategories(
-      categories.map((c) =>
+    setCategories((prev) =>
+      prev.map((c) =>
         c.name === oldName
           ? {
               ...c,
@@ -165,11 +193,14 @@ export function ProductProvider({ children }) {
           : c
       )
     );
-  };
+  }, []);
 
-  const getCategoryByName = (name) => categories.find((c) => c.name === name);
+  const getCategoryByName = useCallback(
+    (name) => categories.find((c) => c.name === name),
+    [categories]
+  );
 
-  const adjustStock = (productId, payload = {}) => {
+  const adjustStock = useCallback((productId, payload = {}) => {
     const { change = 0, reason = 'Manual stock update', actor = 'Manager', reference = '' } = payload;
     const quantityChange = Number(change);
     if (!quantityChange) return null;
@@ -209,9 +240,9 @@ export function ProductProvider({ children }) {
     );
 
     return movementRecord;
-  };
+  }, []);
 
-  const getInventorySummary = () => {
+  const getInventorySummary = useCallback(() => {
     const totals = products.reduce(
       (acc, product) => {
         const onHand = Number(product.inventory?.onHand || 0);
@@ -227,27 +258,45 @@ export function ProductProvider({ children }) {
       { totalOnHand: 0, totalReserved: 0, totalAvailable: 0, outOfStock: 0, lowStock: 0 }
     );
     return totals;
-  };
+  }, [products]);
+
+  const value = useMemo(
+    () => ({
+      products,
+      categories,
+      categoryNames,
+      addProduct,
+      updateProduct,
+      deleteProduct,
+      getProductById,
+      getProductsByCategory,
+      addCategory,
+      deleteCategory,
+      updateCategory,
+      getCategoryByName,
+      adjustStock,
+      getInventorySummary,
+    }),
+    [
+      products,
+      categories,
+      categoryNames,
+      addProduct,
+      updateProduct,
+      deleteProduct,
+      getProductById,
+      getProductsByCategory,
+      addCategory,
+      deleteCategory,
+      updateCategory,
+      getCategoryByName,
+      adjustStock,
+      getInventorySummary,
+    ]
+  );
 
   return (
-    <ProductContext.Provider
-      value={{
-        products,
-        categories,
-        categoryNames,
-        addProduct,
-        updateProduct,
-        deleteProduct,
-        getProductById,
-        getProductsByCategory,
-        addCategory,
-        deleteCategory,
-        updateCategory,
-        getCategoryByName,
-        adjustStock,
-        getInventorySummary,
-      }}
-    >
+    <ProductContext.Provider value={value}>
       {children}
     </ProductContext.Provider>
   );

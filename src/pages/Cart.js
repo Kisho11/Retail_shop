@@ -30,67 +30,67 @@ function ShoppingCart() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
-          <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-1">
             {cartItems.map((item) => (
               <div
                 key={item.lineId}
-                className="flex gap-4 bg-white p-6 rounded-xl shadow hover:shadow-lg transition"
+                className="flex flex-col gap-3 bg-white p-3 rounded-xl shadow transition hover:shadow-lg sm:gap-4 sm:p-6 lg:flex-row"
               >
                 {item.image && (
                   <img
                     src={item.image}
                     alt={item.name}
-                    className="w-28 h-28 object-cover rounded-lg"
+                    className="h-28 w-full object-cover rounded-lg sm:h-28 sm:w-28"
                   />
                 )}
 
                 <div className="flex-1">
                   <Link
                     to={`/product/${item.id}`}
-                    className="text-xl font-bold text-slate-900 hover:text-blue-700 transition"
+                    className="text-sm font-bold text-slate-900 transition hover:text-blue-700 sm:text-xl"
                   >
                     {item.name}
                   </Link>
-                  <p className="text-slate-600 text-sm mb-3">{item.description}</p>
+                  <p className="mb-2 text-xs text-slate-600 sm:mb-3 sm:text-sm">{item.description}</p>
                   <div className="flex flex-wrap gap-2 mb-3">
                     {item.selectedColor && (
-                      <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+                      <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 sm:px-3 sm:py-1 sm:text-xs">
                         Color: {item.selectedColor}
                       </span>
                     )}
                     {item.selectedSize && (
-                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700 sm:px-3 sm:py-1 sm:text-xs">
                         Size: {item.selectedSize}
                       </span>
                     )}
                   </div>
-                  <p className="text-blue-700 font-bold text-lg">${item.salePrice || item.price} each</p>
+                  <p className="text-blue-700 font-bold text-sm sm:text-lg">${item.salePrice || item.price} each</p>
                 </div>
 
-                <div className="flex flex-col items-end justify-between">
-                  <div className="flex items-center gap-3 bg-slate-100 p-2 rounded-lg">
+                <div className="flex flex-col items-start justify-between gap-3 sm:items-end">
+                  <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-lg sm:gap-3 sm:p-2">
                     <button
                       onClick={() => updateQuantity(item.lineId, item.quantity - 1)}
-                      className="px-3 py-1 bg-slate-300 rounded hover:bg-slate-400 font-bold"
+                      className="px-2 py-1 bg-slate-300 rounded hover:bg-slate-400 font-bold sm:px-3"
                     >
                       −
                     </button>
-                    <span className="w-8 text-center font-bold">{item.quantity}</span>
+                    <span className="w-7 text-center font-bold text-sm sm:w-8 sm:text-base">{item.quantity}</span>
                     <button
                       onClick={() => updateQuantity(item.lineId, item.quantity + 1)}
-                      className="px-3 py-1 bg-slate-300 rounded hover:bg-slate-400 font-bold"
+                      className="px-2 py-1 bg-slate-300 rounded hover:bg-slate-400 font-bold sm:px-3"
                     >
                       +
                     </button>
                   </div>
 
-                  <div className="text-right mt-4">
-                    <p className="text-2xl font-bold text-slate-900">
+                  <div className="mt-1 text-left sm:mt-4 sm:text-right">
+                    <p className="text-lg font-bold text-slate-900 sm:text-2xl">
                       ${((item.salePrice || item.price) * item.quantity).toFixed(2)}
                     </p>
                     <button
                       onClick={() => removeFromCart(item.lineId)}
-                      className="text-blue-500 hover:text-blue-700 text-sm mt-3 underline font-semibold"
+                      className="text-blue-500 hover:text-blue-700 text-xs mt-1 underline font-semibold sm:mt-3 sm:text-sm"
                     >
                       Remove
                     </button>

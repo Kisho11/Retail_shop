@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 
 const stableSlide = {
-  backgroundImage: 'url(/elmca.jpg)',
+  backgroundImage: 'url(/main.webp)',
   ctaTo: '/showroom',
   backgroundSize: 'cover',
   backgroundPosition: 'center',
@@ -26,7 +26,7 @@ function Slider() {
 
   return (
     <section className="fade-up">
-      <div className="relative h-[calc(100vh-4rem)] min-h-[640px] w-full overflow-hidden bg-slate-900 shadow-2xl">
+      <div className="relative h-[100svh] w-full overflow-hidden bg-slate-900 shadow-2xl sm:h-[calc(100vh-4rem)] sm:min-h-[640px]">
         <article className="absolute inset-0">
           <div
             className="hero-pan absolute inset-0"
@@ -39,7 +39,7 @@ function Slider() {
           />
           <div className="absolute inset-0 bg-gradient-to-r from-slate-950/75 to-slate-900/45" />
           <div className="relative flex h-full items-center p-6 sm:p-10 lg:p-14">
-            <div className="max-w-2xl text-white">
+            <div className="-mt-16 max-w-2xl text-white sm:mt-0">
               <p className="mb-4 inline-flex rounded-full border border-white/30 bg-white/10 px-4 py-1 text-xs font-bold uppercase tracking-[0.18em]">
                 {t('slider.eyebrow')}
               </p>
@@ -64,7 +64,7 @@ function Slider() {
                 <label htmlFor="hero-product-search" className="sr-only">
                   {t('slider.search')}
                 </label>
-                <div className="relative rounded-2xl bg-white/95 p-2 shadow-2xl ring-1 ring-slate-200/70 backdrop-blur">
+                <div className="relative rounded-2xl bg-white/95 p-2 shadow-2xl ring-1 ring-slate-200/70 transition-shadow focus-within:ring-2 focus-within:ring-red-200 backdrop-blur">
                   <svg
                     viewBox="0 0 24 24"
                     className="pointer-events-none absolute left-7 top-1/2 h-6 w-6 -translate-y-1/2 text-slate-500"
@@ -82,7 +82,7 @@ function Slider() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder={t('slider.searchPlaceholder')}
-                    className="h-14 w-full rounded-xl border border-transparent bg-transparent pl-16 pr-36 text-base font-medium text-slate-800 outline-none transition focus:border-red-200 focus:ring-2 focus:ring-red-200 sm:h-16 sm:text-lg"
+                    className="h-14 w-full appearance-none rounded-xl border border-slate-200 bg-transparent pl-16 pr-36 text-base font-medium text-slate-800 outline-none transition focus:border-slate-200 focus:ring-0 sm:h-16 sm:text-lg"
                   />
                   <button
                     type="submit"

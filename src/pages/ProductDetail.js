@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useProducts } from '../context/ProductContext';
 import UiIcon from '../components/UiIcon';
 import BackButton from '../components/BackButton';
-import products from '../data/products';
+import { getProductPriceDisplay, PRODUCT_TYPES, resolveProductType } from '../utils/productType';
 
 const uiConfig = {
   rating: 4,
@@ -23,6 +24,7 @@ function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const { products } = useProducts();
   const product = products.find((p) => p.id === parseInt(id, 10));
 
   const [selectedColor, setSelectedColor] = useState(product?.colors?.[0] || '');
@@ -32,7 +34,8 @@ function ProductDetail() {
   const [isHoverZoomed, setIsHoverZoomed] = useState(false);
   const [zoomOrigin, setZoomOrigin] = useState('50% 50%');
 
-  const unitPrice = useMemo(() => product?.salePrice || product?.price || 0, [product]);
+  const productType = useMemo(() => resolveProductType(product), [product]);
+  const priceDisplay = useMemo(() => getProductPriceDisplay(product), [product]);
 
   useEffect(() => {
     setSelectedImageIndex(0);
@@ -169,7 +172,9 @@ function ProductDetail() {
 
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">{product.name}</h1>
-            <p className="mt-4 text-3xl tracking-tight text-slate-900">${unitPrice}</p>
+            <p className={`mt-4 text-3xl tracking-tight ${productType === PRODUCT_TYPES.CUSTOM ? 'text-slate-600' : 'text-slate-900'}`}>
+              {priceDisplay.text}
+            </p>
 
             <div className="mt-4 flex items-center">
               <div className="flex items-center">
@@ -183,7 +188,7 @@ function ProductDetail() {
             </div>
 
             <form className="mt-8" onSubmit={handleAddToCart}>
-              {product.colors?.length > 0 && (
+              {productType === PRODUCT_TYPES.VARIABLE && product.colors?.length > 0 && (
                 <div>
                   <h3 className="text-sm font-medium text-slate-900">Color</h3>
                   <fieldset aria-label="Choose a color" className="mt-4">
@@ -214,7 +219,7 @@ function ProductDetail() {
                 </div>
               )}
 
-              {product.sizes?.length > 0 && (
+              {productType === PRODUCT_TYPES.VARIABLE && product.sizes?.length > 0 && (
                 <div className="mt-8">
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-medium text-slate-900">Size</h3>
@@ -249,40 +254,52 @@ function ProductDetail() {
                 </div>
               )}
 
-              <div className="mt-8">
-                <label className="mb-1 block text-sm font-semibold text-slate-700">Quantity</label>
-                <div className="inline-flex items-center rounded-lg border border-slate-300">
-                  <button
-                    onClick={() => setQuantity((prev) => normalizeQuantity(prev - 1))}
-                    className="px-3 py-2 text-slate-700"
-                    type="button"
-                  >
-                    -
-                  </button>
-                  <input
-                    type="number"
-                    min="1"
-                    max="50"
-                    value={quantity}
-                    onChange={(e) => setQuantity(normalizeQuantity(e.target.value))}
-                    className="w-16 border-x border-slate-300 px-2 py-2 text-center focus:outline-none"
-                  />
-                  <button
-                    onClick={() => setQuantity((prev) => normalizeQuantity(prev + 1))}
-                    className="px-3 py-2 text-slate-700"
-                    type="button"
-                  >
-                    +
-                  </button>
+              {productType !== PRODUCT_TYPES.CUSTOM && (
+                <div className="mt-8">
+                  <label className="mb-1 block text-sm font-semibold text-slate-700">Quantity</label>
+                  <div className="inline-flex items-center rounded-lg border border-slate-300">
+                    <button
+                      onClick={() => setQuantity((prev) => normalizeQuantity(prev - 1))}
+                      className="px-3 py-2 text-slate-700"
+                      type="button"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="number"
+                      min="1"
+                      max="50"
+                      value={quantity}
+                      onChange={(e) => setQuantity(normalizeQuantity(e.target.value))}
+                      className="w-16 border-x border-slate-300 px-2 py-2 text-center focus:outline-none"
+                    />
+                    <button
+                      onClick={() => setQuantity((prev) => normalizeQuantity(prev + 1))}
+                      className="px-3 py-2 text-slate-700"
+                      type="button"
+                    >
+                      +
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <button
-                type="submit"
-                className="mt-10 flex w-full items-center justify-center rounded-md border border-transparent bg-primary px-8 py-3 text-base font-medium text-white hover:bg-red-700"
-              >
-                Add to bag
-              </button>
+              {productType === PRODUCT_TYPES.CUSTOM ? (
+                <button
+                  type="button"
+                  onClick={() => navigate('/clients')}
+                  className="mt-10 flex w-full items-center justify-center rounded-md border border-transparent bg-primary px-8 py-3 text-base font-medium text-white hover:bg-red-700"
+                >
+                  Request Quote
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  className="mt-10 flex w-full items-center justify-center rounded-md border border-transparent bg-primary px-8 py-3 text-base font-medium text-white hover:bg-red-700"
+                >
+                  Add to bag
+                </button>
+              )}
             </form>
 
             <div className="mt-10">

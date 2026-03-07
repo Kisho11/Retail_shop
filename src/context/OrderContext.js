@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
 const OrderContext = createContext();
 const ORDERS_STORAGE_KEY = 'orders';
@@ -87,7 +87,7 @@ export function OrderProvider({ children }) {
     localStorage.setItem(ORDERS_STORAGE_KEY, JSON.stringify(orders));
   }, [orders]);
 
-  const placeOrder = (payload) => {
+  const placeOrder = useCallback((payload) => {
     const now = new Date();
     const maxId = orders.reduce((max, order) => Math.max(max, Number(order.id) || 0), 1000);
     const newOrder = normalizeOrder({
@@ -111,15 +111,18 @@ export function OrderProvider({ children }) {
 
     setOrders((prev) => [newOrder, ...prev]);
     return newOrder;
-  };
+  }, [orders]);
+
+  const value = useMemo(
+    () => ({
+      orders,
+      placeOrder,
+    }),
+    [orders, placeOrder]
+  );
 
   return (
-    <OrderContext.Provider
-      value={{
-        orders,
-        placeOrder,
-      }}
-    >
+    <OrderContext.Provider value={value}>
       {children}
     </OrderContext.Provider>
   );

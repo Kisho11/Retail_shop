@@ -14,6 +14,7 @@ import QuickContactActions from './components/QuickContactActions';
 import ScrollToTop from './components/ScrollToTop';
 
 const Home = lazy(() => import('./pages/Home'));
+const About = lazy(() => import('./pages/About'));
 const ProductDetail = lazy(() => import('./pages/ProductDetail'));
 const Cart = lazy(() => import('./pages/Cart'));
 const Checkout = lazy(() => import('./pages/Checkout'));
@@ -27,6 +28,7 @@ const Login = lazy(() => import('./pages/Login'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const ManagerDashboard = lazy(() => import('./pages/ManagerDashboard'));
 const CustomerPortal = lazy(() => import('./pages/CustomerPortal'));
+const CategoriesPage = lazy(() => import('./pages/CategoriesPage'));
 
 function CustomerLayout() {
   return (
@@ -77,6 +79,7 @@ function App() {
 
                     <Route element={<CustomerLayout />}>
                       <Route path="/" element={<Home />} />
+                      <Route path="/about" element={<About />} />
                       <Route path="/product/:id" element={<ProductDetail />} />
                       <Route path="/cart" element={<Cart />} />
                       <Route path="/checkout" element={<Checkout />} />
@@ -87,6 +90,7 @@ function App() {
                       <Route path="/reviews" element={<Reviews />} />
                       <Route path="/catalogue" element={<Catalogue />} />
                       <Route path="/sponsor" element={<Sponsor />} />
+                      <Route path="/categories" element={<CategoriesPage />} />
                       <Route path="/customer-portal" element={<CustomerPortal />} />
                       <Route path="*" element={<Navigate to="/" replace />} />
                     </Route>

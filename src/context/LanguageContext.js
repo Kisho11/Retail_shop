@@ -10,11 +10,12 @@ const translations = {
       getQuote: 'Get Quote',
       banner: 'SAME DAY PICK UP | DELIVERY WITHIN 1 - 3 WORKING DAYS | GET A QUOTE',
       home: 'Home',
+      about: 'About',
       showroom: 'Showroom',
       clients: 'Clients',
       reviews: 'Reviews',
       catalogue: 'Catalogue',
-      myAccount: 'My Account',
+      myAccount: 'My Acc',
       industries: 'Industries',
       signIn: 'Sign In',
       signUp: 'Sign Up',
@@ -136,6 +137,7 @@ const translations = {
       getQuote: 'விலை கேள்',
       banner: 'அதே நாளில் பிக் அப் | 1 - 3 வேலை நாட்களில் டெலிவரி | விலை கேள்',
       home: 'முகப்பு',
+      about: 'எங்களை பற்றி',
       showroom: 'காட்சி அறை',
       clients: 'வாடிக்கையாளர்கள்',
       reviews: 'விமர்சனங்கள்',
@@ -276,11 +278,11 @@ export function LanguageProvider({ children }) {
     document.documentElement.lang = language === 'ta' ? 'ta' : 'en';
   }, [language]);
 
-  const changeLanguage = (nextLanguage) => {
+  const changeLanguage = useCallback((nextLanguage) => {
     setLanguage(nextLanguage);
     localStorage.setItem(LANGUAGE_STORAGE_KEY, nextLanguage);
     document.documentElement.lang = nextLanguage === 'ta' ? 'ta' : 'en';
-  };
+  }, []);
 
   const t = useCallback(
     (key, fallback = key, params) => {
@@ -296,7 +298,7 @@ export function LanguageProvider({ children }) {
       setLanguage: changeLanguage,
       t,
     }),
-    [language, t]
+    [changeLanguage, language, t]
   );
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;

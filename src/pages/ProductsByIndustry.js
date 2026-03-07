@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import products from '../data/products';
 import ProductCard from '../components/ProductCard';
@@ -9,35 +9,42 @@ function ProductsByIndustry() {
   const { industry } = useParams();
   const [searchParams] = useSearchParams();
   const { t } = useLanguage();
-  const formattedIndustry = industry ? decodeURIComponent(industry).replace(/-/g, ' ') : null;
+  const formattedIndustry = useMemo(
+    () => (industry ? decodeURIComponent(industry).replace(/-/g, ' ') : null),
+    [industry]
+  );
   const query = searchParams.get('q')?.trim() || '';
-  const normalizedQuery = query.toLowerCase();
+  const normalizedQuery = useMemo(() => query.toLowerCase(), [query]);
   const hasSearchOrIndustryFilter = Boolean(query || formattedIndustry);
 
-  const filteredProducts = products.filter((product) => {
-    const matchesIndustry = formattedIndustry
-      ? product.industries?.some((ind) => ind.toLowerCase() === formattedIndustry.toLowerCase())
-      : true;
+  const filteredProducts = useMemo(
+    () =>
+      products.filter((product) => {
+        const matchesIndustry = formattedIndustry
+          ? product.industries?.some((ind) => ind.toLowerCase() === formattedIndustry.toLowerCase())
+          : true;
 
-    if (!matchesIndustry) {
-      return false;
-    }
+        if (!matchesIndustry) {
+          return false;
+        }
 
-    if (!normalizedQuery) {
-      return true;
-    }
+        if (!normalizedQuery) {
+          return true;
+        }
 
-    const searchableContent = [
-      product.name,
-      product.description,
-      ...(product.categories || []),
-      ...(product.industries || []),
-    ]
-      .join(' ')
-      .toLowerCase();
+        const searchableContent = [
+          product.name,
+          product.description,
+          ...(product.categories || []),
+          ...(product.industries || []),
+        ]
+          .join(' ')
+          .toLowerCase();
 
-    return searchableContent.includes(normalizedQuery);
-  });
+        return searchableContent.includes(normalizedQuery);
+      }),
+    [formattedIndustry, normalizedQuery]
+  );
 
   return (
     <section className="shell py-10">
@@ -63,7 +70,7 @@ function ProductsByIndustry() {
       </div>
 
       {filteredProducts.length > 0 ? (
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-4 gap-2 sm:gap-5 xl:grid-cols-3">
           {filteredProducts.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
