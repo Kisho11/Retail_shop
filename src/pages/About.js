@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import Seo from '../components/Seo';
 
 const highlights = [
   {
@@ -26,6 +27,10 @@ const stats = [
 function About() {
   return (
     <div className="pb-8">
+      <Seo
+        title="About Elmshelf"
+        description="Learn how Elmshelf helps retailers with commercial shelving, display systems, store fit-outs, and practical shopfitting solutions across the UK."
+      />
       <section className="shell mt-10">
         <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white">
           <div className="grid gap-0 lg:grid-cols-[1.1fr_0.9fr]">

@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import Slider from '../components/Slider';
 import Categories from '../components/Categories';
+import Seo from '../components/Seo';
 import { useLanguage } from '../context/LanguageContext';
 
 const logos = [
@@ -19,6 +20,10 @@ function Home() {
 
   return (
     <div className="pb-6">
+      <Seo
+        title="Retail Shelving, Displays & Shop Fittings"
+        description="Shop retail shelving, display counters, refrigeration units, flooring, and store fixtures from Elmshelf for supermarkets, bakeries, pharmacies, and specialist shops."
+      />
       <Slider />
 
       <section className="shell fade-up mt-8">
@@ -53,8 +58,8 @@ function Home() {
         
       </section>
 
-      <section className="shell mt-10">
-        <div className="logo-marquee rounded-2xl border border-slate-200 bg-white py-6 sm:py-8">
+      <section className="mt-10">
+        <div className="logo-marquee w-full bg-white py-6 sm:py-8">
           <div className="logo-track">
             {[...logos, ...logos].map((logo, index) => (
               <div key={`${logo.src}-${index}`} className="logo-item">

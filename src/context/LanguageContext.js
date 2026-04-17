@@ -5,7 +5,7 @@ const LANGUAGE_STORAGE_KEY = 'app_language_v1';
 const translations = {
   en: {
     nav: {
-      limitedOffer: 'Limited Offer: Up to 25% off selected shelving and off-licence fittings.',
+      limitedOffer: 'Limited Offer: Up to 25% off',
       viewDeals: 'View Deals',
       getQuote: 'Get Quote',
       banner: 'SAME DAY PICK UP | DELIVERY WITHIN 1 - 3 WORKING DAYS | GET A QUOTE',
@@ -128,6 +128,15 @@ const translations = {
       marketingDesc: 'Supports ad and campaign personalization.',
       savePreferences: 'Save preferences',
       cancel: 'Cancel',
+    },
+    advert: {
+      badge: 'Special offer',
+      titleAccent: "Don't miss out",
+      title: 'on our discounted products.',
+      desc: "Don't miss out on amazing discounts. Shop now before they're gone!",
+      primaryCta: 'Check out the products',
+      secondaryCta: "No thanks, I don't want the discounts.",
+      close: 'Close advert popup',
     },
   },
   ta: {
@@ -255,6 +264,15 @@ const translations = {
       marketingDesc: 'விளம்பர தனிப்பயனாக்கத்திற்கு உதவும்.',
       savePreferences: 'அமைப்பை சேமி',
       cancel: 'ரத்து செய்',
+    },
+    advert: {
+      badge: 'சிறப்பு சலுகை',
+      titleAccent: 'தவறவிடாதீர்கள்',
+      title: 'எங்கள் தள்ளுபடி செய்யப்பட்ட பொருட்களை.',
+      desc: 'அற்புதமான தள்ளுபடிகளை தவறவிடாதீர்கள். அவை முடிவதற்கு முன் இப்போது வாங்குங்கள்!',
+      primaryCta: 'பொருட்களை பார்க்க',
+      secondaryCta: 'வேண்டாம், எனக்கு தள்ளுபடி தேவையில்லை.',
+      close: 'விளம்பர சாளரத்தை மூடு',
     },
   },
 };

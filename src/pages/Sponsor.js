@@ -1,9 +1,14 @@
 import React from 'react';
 import BackButton from '../components/BackButton';
+import Seo from '../components/Seo';
 
 function Sponsor() {
   return (
     <div className="container mx-auto py-8">
+      <Seo
+        title="Sponsorships"
+        description="Learn about the sponsorships, community involvement, and business support initiatives backed by Elmshelf."
+      />
       <BackButton className="mb-4" />
       <h1 className="text-3xl sm:text-4xl font-bold text-primary mb-4">We Proudly Sponsor</h1>
       <p className="text-gray-700">Details on our sponsorships and events.</p>

@@ -155,6 +155,32 @@ export function AuthProvider({ children }) {
     return { success: true, user: customerSession };
   }, [customerUsers, setSession]);
 
+  const resetCustomerPassword = useCallback((email, nextPassword) => {
+    const normalizedEmail = email.trim().toLowerCase();
+    const existing = customerUsers.find((item) => item.email.toLowerCase() === normalizedEmail);
+
+    if (!existing) {
+      return { success: false, error: 'No customer account found with that email' };
+    }
+
+    if (existing.provider === 'google') {
+      return {
+        success: false,
+        error: 'This account uses Google sign in. Please continue with Google.',
+      };
+    }
+
+    setCustomerUsers((prev) =>
+      prev.map((item) =>
+        item.email.toLowerCase() === normalizedEmail
+          ? { ...item, password: nextPassword }
+          : item
+      )
+    );
+
+    return { success: true };
+  }, [customerUsers]);
+
   const authWithGoogle = useCallback((credential, mode = 'signin') => {
     const profile = decodeGoogleCredential(credential);
 
@@ -238,6 +264,7 @@ export function AuthProvider({ children }) {
       login,
       signUpCustomer,
       signInCustomer,
+      resetCustomerPassword,
       authWithGoogle,
       logout,
       isAdmin,
@@ -256,6 +283,7 @@ export function AuthProvider({ children }) {
       login,
       signUpCustomer,
       signInCustomer,
+      resetCustomerPassword,
       authWithGoogle,
       logout,
       isAdmin,

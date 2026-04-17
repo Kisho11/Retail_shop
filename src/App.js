@@ -10,6 +10,7 @@ import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import CartToast from './components/CartToast';
 import CookieConsentBanner from './components/CookieConsentBanner';
+import AdvertPopup from './components/AdvertPopup';
 import QuickContactActions from './components/QuickContactActions';
 import ScrollToTop from './components/ScrollToTop';
 
@@ -40,6 +41,7 @@ function CustomerLayout() {
       </main>
       <Footer />
       <QuickContactActions />
+      <AdvertPopup />
       <CookieConsentBanner />
     </div>
   );

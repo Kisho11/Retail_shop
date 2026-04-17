@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import BackButton from '../components/BackButton';
+import Seo from '../components/Seo';
 
 function ShoppingCart() {
   const navigate = useNavigate();
@@ -10,6 +11,7 @@ function ShoppingCart() {
   if (cartItems.length === 0) {
     return (
       <div className="shell py-16 text-center">
+        <Seo title="Shopping Cart" description="Review the items in your Elmshelf cart before checkout." noindex />
         <BackButton className="mb-6" />
         <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">Shopping Cart</h1>
         <p className="text-lg text-slate-600 mb-8">Your cart is empty</p>
@@ -25,6 +27,7 @@ function ShoppingCart() {
 
   return (
     <div className="shell py-8">
+      <Seo title="Shopping Cart" description="Review the items in your Elmshelf cart before checkout." noindex />
       <BackButton className="mb-4" />
       <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-8">Shopping Cart</h1>
 

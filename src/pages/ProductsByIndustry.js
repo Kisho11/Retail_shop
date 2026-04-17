@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import products from '../data/products';
 import ProductCard from '../components/ProductCard';
+import Seo from '../components/Seo';
 import { useLanguage } from '../context/LanguageContext';
 import BackButton from '../components/BackButton';
 
@@ -16,6 +17,16 @@ function ProductsByIndustry() {
   const query = searchParams.get('q')?.trim() || '';
   const normalizedQuery = useMemo(() => query.toLowerCase(), [query]);
   const hasSearchOrIndustryFilter = Boolean(query || formattedIndustry);
+  const seoTitle = formattedIndustry
+    ? `${formattedIndustry} Shop Fittings`
+    : query
+      ? `Search results for "${query}"`
+      : 'Products by Industry';
+  const seoDescription = formattedIndustry
+    ? `Browse Elmshelf retail shelving, counters, refrigeration, and display fixtures for ${formattedIndustry} businesses.`
+    : query
+      ? `Explore Elmshelf search results for ${query} across retail shelving, displays, and store fixtures.`
+      : 'Browse retail shelving, displays, and store equipment by industry to find the right fit for your shop.';
 
   const filteredProducts = useMemo(
     () =>
@@ -48,6 +59,7 @@ function ProductsByIndustry() {
 
   return (
     <section className="shell py-10">
+      <Seo title={seoTitle} description={seoDescription} />
       <div className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
         {hasSearchOrIndustryFilter && (
           <BackButton className="mb-4" />

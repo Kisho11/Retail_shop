@@ -4,6 +4,7 @@ import { useCart } from '../context/CartContext';
 import { useOrders } from '../context/OrderContext';
 import UiIcon from '../components/UiIcon';
 import BackButton from '../components/BackButton';
+import Seo from '../components/Seo';
 
 function Checkout() {
   const navigate = useNavigate();
@@ -34,6 +35,7 @@ function Checkout() {
   if (cartItems.length === 0 && !orderPlaced) {
     return (
       <div className="container mx-auto px-4 py-16 text-center sm:px-8">
+        <Seo title="Checkout" description="Complete your Elmshelf checkout securely." noindex />
         <BackButton className="mb-6" />
         <h1 className="text-3xl sm:text-4xl font-bold text-primary mb-4">Checkout</h1>
         <p className="text-lg text-gray-600 mb-6">Your cart is empty</p>
@@ -115,6 +117,7 @@ function Checkout() {
   if (orderPlaced) {
     return (
       <div className="container mx-auto px-4 py-16 text-center sm:px-8">
+        <Seo title="Order Confirmed" description="Your Elmshelf order has been confirmed." noindex />
         <BackButton className="mb-6" />
         <div className="max-w-md mx-auto bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-500 rounded-xl p-12 shadow-xl">
           <div className="mb-6 flex justify-center animate-bounce">
@@ -156,6 +159,7 @@ function Checkout() {
 
   return (
     <div className="container mx-auto px-4 py-8 sm:px-8">
+      <Seo title="Checkout" description="Complete your Elmshelf checkout securely." noindex />
       <BackButton className="mb-4" />
       <h1 className="text-3xl sm:text-4xl font-bold text-primary mb-8">Checkout</h1>
 

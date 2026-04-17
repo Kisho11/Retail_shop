@@ -4,6 +4,7 @@ import { useCart } from '../context/CartContext';
 import { useProducts } from '../context/ProductContext';
 import UiIcon from '../components/UiIcon';
 import BackButton from '../components/BackButton';
+import Seo from '../components/Seo';
 import { getProductPriceDisplay, PRODUCT_TYPES, resolveProductType } from '../utils/productType';
 
 const uiConfig = {
@@ -64,6 +65,32 @@ function ProductDetail() {
       : [product.image, product.image, product.image, product.image].filter(Boolean);
   const selectedImage = gallery[selectedImageIndex] || product.image;
   const breadcrumbs = [product.categories?.[0], product.industries?.[0], product.name].filter(Boolean);
+  const productSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: product.name,
+    description: product.description,
+    image: gallery.map((image) => new URL(image, window.location.origin).toString()),
+    category: product.categories?.join(', '),
+    brand: {
+      '@type': 'Brand',
+      name: 'Elmshelf',
+    },
+    offers: productType === PRODUCT_TYPES.CUSTOM
+      ? {
+          '@type': 'Offer',
+          priceCurrency: 'GBP',
+          availability: 'https://schema.org/InStock',
+          url: window.location.href,
+        }
+      : {
+          '@type': 'Offer',
+          priceCurrency: 'GBP',
+          price: String(priceDisplay.numericPrice ?? product.salePrice ?? product.price ?? ''),
+          availability: 'https://schema.org/InStock',
+          url: window.location.href,
+        },
+  };
 
   const handleAddToCart = (event) => {
     event.preventDefault();
@@ -90,6 +117,14 @@ function ProductDetail() {
 
   return (
     <div className="bg-white pb-10">
+      <Seo
+        title={product.name}
+        description={product.description}
+        image={product.image || '/main.webp'}
+        type="product"
+        canonicalPath={`/product/${product.id}`}
+        structuredData={productSchema}
+      />
       <div className="pt-6">
         <div className="shell px-2 sm:px-4">
           <BackButton className="mb-4" />

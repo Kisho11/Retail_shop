@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ProductCard from '../components/ProductCard';
+import Seo from '../components/Seo';
 import { useLanguage } from '../context/LanguageContext';
 import { useProducts } from '../context/ProductContext';
 
@@ -72,6 +73,10 @@ function CategoriesPage() {
 
   return (
     <section className="py-10">
+      <Seo
+        title="Product Categories"
+        description="Explore Elmshelf product categories including shop shelving, displays, refrigeration, checkout counters, and flooring solutions."
+      />
       <div className="mx-auto w-[min(1400px,100%-1.5rem)]">
         <div className="mb-8">
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-blue-700">{t('categories.shopByCategory')}</p>
