@@ -4,6 +4,17 @@ import { useCart } from '../context/CartContext';
 import BackButton from '../components/BackButton';
 import Seo from '../components/Seo';
 
+function formatSelectedAttributes(item) {
+  if (item.selectedAttributes && Object.keys(item.selectedAttributes).length > 0) {
+    return Object.entries(item.selectedAttributes).map(([key, value]) => `${key}: ${value}`);
+  }
+
+  return [
+    item.selectedColor ? `Color: ${item.selectedColor}` : null,
+    item.selectedSize ? `Size: ${item.selectedSize}` : null,
+  ].filter(Boolean);
+}
+
 function ShoppingCart() {
   const navigate = useNavigate();
   const { cartItems, removeFromCart, updateQuantity, getTotalPrice } = useCart();
@@ -56,18 +67,13 @@ function ShoppingCart() {
                   </Link>
                   <p className="mb-2 text-xs text-slate-600 sm:mb-3 sm:text-sm">{item.description}</p>
                   <div className="flex flex-wrap gap-2 mb-3">
-                    {item.selectedColor && (
-                      <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 sm:px-3 sm:py-1 sm:text-xs">
-                        Color: {item.selectedColor}
+                    {formatSelectedAttributes(item).map((label) => (
+                      <span key={`${item.lineId}-${label}`} className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700 sm:px-3 sm:py-1 sm:text-xs">
+                        {label}
                       </span>
-                    )}
-                    {item.selectedSize && (
-                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-700 sm:px-3 sm:py-1 sm:text-xs">
-                        Size: {item.selectedSize}
-                      </span>
-                    )}
+                    ))}
                   </div>
-                  <p className="text-blue-700 font-bold text-sm sm:text-lg">${item.salePrice || item.price} each</p>
+                  <p className="text-blue-700 font-bold text-sm sm:text-lg">£{item.salePrice || item.price} each</p>
                 </div>
 
                 <div className="flex flex-col items-start justify-between gap-3 sm:items-end">
@@ -89,7 +95,7 @@ function ShoppingCart() {
 
                   <div className="mt-1 text-left sm:mt-4 sm:text-right">
                     <p className="text-lg font-bold text-slate-900 sm:text-2xl">
-                      ${((item.salePrice || item.price) * item.quantity).toFixed(2)}
+                      £{((item.salePrice || item.price) * item.quantity).toFixed(2)}
                     </p>
                     <button
                       onClick={() => removeFromCart(item.lineId)}
@@ -117,7 +123,7 @@ function ShoppingCart() {
           <div className="space-y-4 border-b border-slate-200 pb-4 mb-4">
             <div className="flex justify-between">
               <span className="text-slate-600">Subtotal:</span>
-              <span className="font-semibold text-slate-900">${getTotalPrice().toFixed(2)}</span>
+              <span className="font-semibold text-slate-900">£{getTotalPrice().toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-600">Shipping:</span>
@@ -125,13 +131,13 @@ function ShoppingCart() {
             </div>
             <div className="flex justify-between">
               <span className="text-slate-600">Tax (10%):</span>
-              <span className="font-semibold text-slate-900">${(getTotalPrice() * 0.1).toFixed(2)}</span>
+              <span className="font-semibold text-slate-900">£{(getTotalPrice() * 0.1).toFixed(2)}</span>
             </div>
           </div>
 
           <div className="flex justify-between text-2xl font-bold text-slate-900 mb-6 bg-slate-50 p-4 rounded-lg">
             <span>Total:</span>
-            <span>${(getTotalPrice() * 1.1).toFixed(2)}</span>
+            <span>£{(getTotalPrice() * 1.1).toFixed(2)}</span>
           </div>
 
           <button

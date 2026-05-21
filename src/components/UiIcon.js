@@ -133,6 +133,97 @@ const iconPaths = {
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 7v6l3.5 2" />
     </>
   ),
+  bold: (
+    <>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 5h5a3 3 0 0 1 0 6H8V5Z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 11h6a3.5 3.5 0 1 1 0 7H8v-7Z" />
+    </>
+  ),
+  italic: (
+    <>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M14 5h4" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 19h4" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M14 5 10 19" />
+    </>
+  ),
+  underline: (
+    <>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8 5v6a4 4 0 1 0 8 0V5" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 19h12" />
+    </>
+  ),
+  link: (
+    <>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M10 14 8 16a3 3 0 0 1-4-4l3-3a3 3 0 0 1 4 0" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M14 10l2-2a3 3 0 1 1 4 4l-3 3a3 3 0 0 1-4 0" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 15l6-6" />
+    </>
+  ),
+  paragraph: (
+    <>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h9a4 4 0 0 1 0 8h-3" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v13" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 19h6" />
+    </>
+  ),
+  heading: (
+    <>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 6v12" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h7" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M16 8h3" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M17.5 8v10" />
+    </>
+  ),
+  subheading: (
+    <>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 7v10" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M11 7v10" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h6" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 9h4" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 15h4" />
+    </>
+  ),
+  orderedList: (
+    <>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M10 7h10M10 12h10M10 17h10" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h1v4" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3.5 13.5c.3-.8 1.4-1.5 2.3-1 .7.3.7 1.2.1 1.7L4 16h2" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3.8 18.2c.5-.5 1.5-.8 2.2-.4.8.4.9 1.4.1 1.9-.8.5-1.8.3-2.4-.2" />
+    </>
+  ),
+  quote: (
+    <>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8.5 10H5.8A1.8 1.8 0 0 0 4 11.8V14a2 2 0 0 0 2 2h1v3l3-3" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M18.5 10h-2.7a1.8 1.8 0 0 0-1.8 1.8V14a2 2 0 0 0 2 2h1v3l3-3" />
+    </>
+  ),
+  image: (
+    <>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <circle cx="9" cy="10" r="1.5" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="m21 16-4.5-4.5L8 20" />
+    </>
+  ),
+  arrowUp: (
+    <path strokeLinecap="round" strokeLinejoin="round" d="m12 5-5 5m5-5 5 5M12 5v14" />
+  ),
+  arrowDown: (
+    <path strokeLinecap="round" strokeLinejoin="round" d="m12 19 5-5m-5 5-5-5m5 5V5" />
+  ),
+  plus: (
+    <>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14" />
+    </>
+  ),
+  table: (
+    <>
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M3 14h18" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5v14M15 5v14" />
+    </>
+  ),
 };
 
 function UiIcon({ name, className = 'h-5 w-5', strokeWidth = 2 }) {

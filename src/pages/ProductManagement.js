@@ -1,9 +1,14 @@
-import React, { useState } from 'react';
+import React, { startTransition, useEffect, useState } from 'react';
 import { useProducts } from '../context/ProductContext';
+import ProductContentEditor from '../components/ProductContentEditor';
 import UiIcon from '../components/UiIcon';
 import { PRODUCT_TYPES, resolveProductType } from '../utils/productType';
+import {
+  createDefaultProductContent,
+  normalizeProductContent,
+} from '../utils/productContent';
 
-const MIN_IMAGE_COUNT = 5;
+const MIN_IMAGE_COUNT = 1;
 const MAX_IMAGE_COUNT = 10;
 const MIN_VIDEO_COUNT = 1;
 const MAX_VIDEO_COUNT = 5;
@@ -18,9 +23,93 @@ const createEmptyVariantGroup = () => ({
   finalized: false,
 });
 
+const getVariantPricingKey = (attributes = {}) =>
+  Object.entries(attributes)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([attribute, value]) => `${attribute}::${value}`)
+    .join('||');
+
+const getFinalizedVariantGroups = (variantGroups = []) =>
+  (variantGroups || [])
+    .map((group) => ({
+      attribute: (group.attribute || '').trim(),
+      values: (group.values || [])
+        .map((entry) => (entry.value || '').trim())
+        .filter(Boolean),
+    }))
+    .filter((group) => group.attribute && group.values.length > 0);
+
+const buildVariantCombinations = (variantGroups = []) => {
+  if (variantGroups.length === 0) return [];
+
+  return variantGroups.reduce(
+    (acc, group) =>
+      acc.flatMap((existingRow) =>
+        group.values.map((value) => ({
+          ...existingRow,
+          [group.attribute]: value,
+        }))
+      ),
+    [{}]
+  );
+};
+
+const buildVariantGroupsFromPricing = (variantPricing = []) => {
+  const grouped = (variantPricing || []).reduce((acc, row) => {
+    const attributes = row.attributes && typeof row.attributes === 'object' ? row.attributes : null;
+
+    if (attributes && Object.keys(attributes).length > 0) {
+      Object.entries(attributes).forEach(([attribute, value]) => {
+        if (!attribute || !value) return;
+        if (!acc[attribute]) acc[attribute] = new Set();
+        acc[attribute].add(value);
+      });
+      return acc;
+    }
+
+    const attribute = (row.attribute || '').trim();
+    const value = (row.value || '').trim();
+    if (!attribute || !value) return acc;
+    if (!acc[attribute]) acc[attribute] = new Set();
+    acc[attribute].add(value);
+    return acc;
+  }, {});
+
+  const groups = Object.entries(grouped).map(([attribute, values]) => ({
+    attribute,
+    values: [...values].map((value) => ({ value })),
+    finalized: true,
+  }));
+
+  return groups.length > 0 ? groups : [createEmptyVariantGroup()];
+};
+
+const syncVariantPricingWithGroups = (variantPricing = [], variantGroups = [], basePrice = '') => {
+  const finalizedGroups = getFinalizedVariantGroups(variantGroups);
+  const combinations = buildVariantCombinations(finalizedGroups);
+  const existingByKey = new Map(
+    (variantPricing || [])
+      .filter((row) => row.attributes && typeof row.attributes === 'object')
+      .map((row) => [getVariantPricingKey(row.attributes), row])
+  );
+
+  return combinations.map((attributes) => {
+    const existing = existingByKey.get(getVariantPricingKey(attributes));
+    return {
+      attribute: 'Combination',
+      value: Object.values(attributes).join(' / '),
+      attributes,
+      price: existing?.price ?? basePrice ?? '',
+      stock: existing?.stock ?? 0,
+      sku: existing?.sku ?? '',
+    };
+  });
+};
+
 function ProductManagement() {
-  const { products, categoryNames, addProduct, updateProduct, deleteProduct } = useProducts();
+  const { products, categories, categoryNames, addProduct, updateProduct, deleteProduct } = useProducts();
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showVariantGrid, setShowVariantGrid] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [draggedImageIndex, setDraggedImageIndex] = useState(null);
   const [dragOverImageIndex, setDragOverImageIndex] = useState(null);
@@ -28,14 +117,21 @@ function ProductManagement() {
   const [draggedVideoIndex, setDraggedVideoIndex] = useState(null);
   const [dragOverVideoIndex, setDragOverVideoIndex] = useState(null);
   const [isDraggingVideo, setIsDraggingVideo] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [statusPopup, setStatusPopup] = useState({ visible: false, title: '', message: '', id: null });
+  const [isPreparingEdit, setIsPreparingEdit] = useState(false);
+  const [pendingDeleteProduct, setPendingDeleteProduct] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
+    additionalInformation: createDefaultProductContent(),
     price: '',
     salePrice: '',
     productType: PRODUCT_TYPES.VARIABLE,
     variantGroups: [createEmptyVariantGroup()],
+    variantPricing: [],
     categories: [],
+    subcategories: [],
     industries: [],
     imageUrls: Array(MIN_IMAGE_COUNT).fill(''),
     videoUrls: Array(MIN_VIDEO_COUNT).fill(''),
@@ -48,22 +144,45 @@ function ProductManagement() {
     'Grocery store', 'Butcher', 'Organic shops', 'Pharmacy store', 'Restaurants', 'Bakery'
   ];
   const nextProductId = Math.max(...products.map((p) => Number(p.id) || 0), 0) + 1;
+  const availableSubcategories = Array.from(
+    new Map(
+      categories
+        .filter((category) => formData.categories.includes(category.name))
+        .flatMap((category) => category.subcategories || [])
+        .map((subcategory) => [subcategory.name, subcategory])
+    ).values()
+  );
+
+  useEffect(() => {
+    if (!statusPopup.visible) return undefined;
+    const timer = window.setTimeout(() => {
+      setStatusPopup((prev) => ({ ...prev, visible: false }));
+    }, 2400);
+    return () => window.clearTimeout(timer);
+  }, [statusPopup.visible, statusPopup.id]);
 
   const resetForm = () => {
     setFormData({
       name: '',
       description: '',
+      additionalInformation: createDefaultProductContent(),
       price: '',
       salePrice: '',
       productType: PRODUCT_TYPES.VARIABLE,
       variantGroups: [createEmptyVariantGroup()],
+      variantPricing: [],
       categories: [],
+      subcategories: [],
       industries: [],
       imageUrls: Array(MIN_IMAGE_COUNT).fill(''),
       videoUrls: Array(MIN_VIDEO_COUNT).fill(''),
     });
     setEditingId(null);
+    setShowVariantGrid(false);
     setError('');
+    setSuccess('');
+    setIsPreparingEdit(false);
+    setStatusPopup((prev) => ({ ...prev, visible: false }));
   };
 
   const handleInputChange = (e) => {
@@ -72,11 +191,26 @@ function ProductManagement() {
   };
 
   const handleCategoryToggle = (cat) => {
+    const nextCategories = formData.categories.includes(cat)
+      ? formData.categories.filter(c => c !== cat)
+      : [...formData.categories, cat];
+    const allowedSubcategories = categories
+      .filter((category) => nextCategories.includes(category.name))
+      .flatMap((category) => (category.subcategories || []).map((subcategory) => subcategory.name));
+
     setFormData({
       ...formData,
-      categories: formData.categories.includes(cat)
-        ? formData.categories.filter(c => c !== cat)
-        : [...formData.categories, cat]
+      categories: nextCategories,
+      subcategories: (formData.subcategories || []).filter((name) => allowedSubcategories.includes(name)),
+    });
+  };
+
+  const handleSubcategoryToggle = (subcat) => {
+    setFormData({
+      ...formData,
+      subcategories: formData.subcategories.includes(subcat)
+        ? formData.subcategories.filter((s) => s !== subcat)
+        : [...formData.subcategories, subcat],
     });
   };
 
@@ -308,6 +442,34 @@ function ProductManagement() {
     setError('');
   };
 
+  const handleOpenVariantGrid = () => {
+    const finalizedGroups = getFinalizedVariantGroups(formData.variantGroups);
+    const hasIncompleteGroup = finalizedGroups.length !== formData.variantGroups.length;
+
+    if (hasIncompleteGroup || finalizedGroups.length === 0) {
+      setError('Finish each attribute group before opening the variant grid');
+      return;
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      variantPricing: syncVariantPricingWithGroups(prev.variantPricing, prev.variantGroups, prev.price),
+    }));
+    setShowVariantGrid(true);
+    setError('');
+  };
+
+  const handleVariantGridPriceChange = (rowIndex, value) => {
+    setFormData((prev) => {
+      const nextVariantPricing = [...prev.variantPricing];
+      nextVariantPricing[rowIndex] = {
+        ...nextVariantPricing[rowIndex],
+        price: value,
+      };
+      return { ...prev, variantPricing: nextVariantPricing };
+    });
+  };
+
   const handleEditVariantGroup = (groupIndex) => {
     setFormData((prev) => {
       const nextGroups = [...prev.variantGroups];
@@ -316,7 +478,7 @@ function ProductManagement() {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
@@ -334,11 +496,6 @@ function ProductManagement() {
 
     const imageUrls = formData.imageUrls.map((url) => url.trim());
     const uploadedImageUrls = imageUrls.filter(Boolean);
-    if (uploadedImageUrls.length < MIN_IMAGE_COUNT) {
-      setError('Please upload at least 5 images');
-      return;
-    }
-
     const cleanVariantOptions = formData.variantGroups
       .flatMap((group) => {
         const attribute = group.attribute.trim();
@@ -349,6 +506,12 @@ function ProductManagement() {
       })
       .filter((row) => row.attribute || row.value);
 
+    const matrixVariantPricing = syncVariantPricingWithGroups(
+      formData.variantPricing,
+      formData.variantGroups,
+      formData.price
+    );
+
     if (formData.productType === PRODUCT_TYPES.VARIABLE) {
       if (cleanVariantOptions.length === 0) {
         setError('Add at least one attribute option for variable products');
@@ -357,6 +520,12 @@ function ProductManagement() {
       const hasIncompleteRow = cleanVariantOptions.some((row) => !row.attribute || !row.value);
       if (hasIncompleteRow) {
         setError('Each attribute option needs attribute and value');
+        return;
+      }
+
+      const hasMissingMatrixPrice = matrixVariantPricing.some((row) => row.price === '' || row.price === null || row.price === undefined);
+      if (hasMissingMatrixPrice) {
+        setError('Open the variant grid and add a price for each combination');
         return;
       }
     }
@@ -375,15 +544,17 @@ function ProductManagement() {
     const payload = {
       name: formData.name,
       description: formData.description,
+      additionalInformation: normalizeProductContent(formData.additionalInformation),
       price: formData.productType === PRODUCT_TYPES.CUSTOM ? '' : formData.price,
       salePrice: formData.productType === PRODUCT_TYPES.CUSTOM ? '' : formData.salePrice,
       productType: formData.productType,
-      variantPricing: formData.productType === PRODUCT_TYPES.VARIABLE ? cleanVariantOptions : [],
+      variantPricing: formData.productType === PRODUCT_TYPES.VARIABLE ? matrixVariantPricing : [],
       minPrice: undefined,
       maxPrice: undefined,
       sizes: uniqueSizes,
       colors: uniqueColors,
       categories: formData.categories,
+      subcategories: formData.subcategories,
       industries: formData.industries,
       image: mainImage,
       galleryImages: uploadedImageUrls.slice(1),
@@ -393,76 +564,151 @@ function ProductManagement() {
       videoCount: uploadedVideoUrls.length,
     };
 
-    if (editingId) {
-      updateProduct(editingId, payload);
-      setSuccess('Product updated successfully!');
-    } else {
-      addProduct(payload);
-      setSuccess('Product added successfully!');
-    }
+    try {
+      setIsSaving(true);
+      if (editingId) {
+        await updateProduct(editingId, payload);
+        setSuccess('Product updated successfully!');
+        setStatusPopup({
+          visible: true,
+          title: 'Product updated',
+          message: `${formData.name || 'Product'} was updated successfully.`,
+          id: Date.now(),
+        });
+      } else {
+        await addProduct(payload);
+        setSuccess('Product added successfully!');
+        setStatusPopup({
+          visible: true,
+          title: 'Product added',
+          message: `${formData.name || 'Product'} was saved successfully.`,
+          id: Date.now(),
+        });
+      }
 
-    resetForm();
-    setShowAddForm(false);
+      resetForm();
+      setShowAddForm(false);
+    } catch (err) {
+      setError(err.message || 'Unable to save product');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleEdit = (product) => {
+    setError('');
+    setSuccess('');
+    setStatusPopup((prev) => ({ ...prev, visible: false }));
+    setIsPreparingEdit(true);
+    setEditingId(product.id);
+    setShowVariantGrid(false);
+    setShowAddForm(true);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
     const imageUrls = [product.image, ...(product.galleryImages || [])].filter(Boolean).slice(0, MAX_IMAGE_COUNT);
     const safeUrls = [...imageUrls];
     while (safeUrls.length < MIN_IMAGE_COUNT) safeUrls.push('');
     const videoUrls = [product.video, ...(product.galleryVideos || [])].filter(Boolean).slice(0, MAX_VIDEO_COUNT);
     const safeVideoUrls = [...videoUrls];
     while (safeVideoUrls.length < MIN_VIDEO_COUNT) safeVideoUrls.push('');
-    setFormData({
-      name: product.name || '',
-      description: product.description || '',
-      price: product.price || '',
-      salePrice: product.salePrice || '',
-      productType: resolveProductType(product),
-      variantGroups: Array.isArray(product.variantPricing) && product.variantPricing.length > 0
-        ? (() => {
-            const grouped = product.variantPricing.reduce((acc, row) => {
-              let attribute = row.attribute || '';
-              let value = row.value || '';
-              if (!attribute || !value) {
-                const attributes = row.attributes && typeof row.attributes === 'object' ? row.attributes : {};
-                const firstKey = Object.keys(attributes)[0] || '';
-                attribute = attribute || firstKey;
-                value = value || (firstKey ? attributes[firstKey] || '' : '');
-              }
-              if (!attribute) return acc;
-              if (!acc[attribute]) acc[attribute] = [];
-              acc[attribute].push({
-                value,
-              });
-              return acc;
-            }, {});
-            const groups = Object.entries(grouped).map(([attribute, values]) => ({
-              attribute,
-              values: values.length > 0 ? values : [createEmptyVariantValue()],
-              finalized: true,
-            }));
-            return groups.length > 0 ? groups : [createEmptyVariantGroup()];
-          })()
-        : [createEmptyVariantGroup()],
-      categories: product.categories || [],
-      industries: product.industries || [],
-      imageUrls: safeUrls,
-      videoUrls: safeVideoUrls,
-    });
-    setEditingId(product.id);
-    setShowAddForm(true);
-    window.scrollTo(0, 0);
+    window.setTimeout(() => {
+      startTransition(() => {
+        setFormData({
+          name: product.name || '',
+          description: product.description || '',
+          additionalInformation: normalizeProductContent(product.additionalInformation),
+          price: product.price || '',
+          salePrice: product.salePrice || '',
+          productType: resolveProductType(product),
+          variantGroups: Array.isArray(product.variantPricing) && product.variantPricing.length > 0
+            ? buildVariantGroupsFromPricing(product.variantPricing)
+            : [createEmptyVariantGroup()],
+          variantPricing: Array.isArray(product.variantPricing) ? product.variantPricing : [],
+          categories: product.categories || [],
+          subcategories: product.subcategories || [],
+          industries: product.industries || [],
+          imageUrls: safeUrls,
+          videoUrls: safeVideoUrls,
+        });
+        setIsPreparingEdit(false);
+      });
+    }, 0);
   };
 
-  const handleDelete = (productId) => {
-    if (window.confirm('Are you sure you want to delete this product?')) {
-      deleteProduct(productId);
+  const handleDelete = async () => {
+    if (!pendingDeleteProduct) return;
+
+    try {
+      await deleteProduct(pendingDeleteProduct.id);
       setSuccess('Product deleted successfully!');
+      setStatusPopup({
+        visible: true,
+        title: 'Product deleted',
+        message: `${pendingDeleteProduct.name || 'Product'} was deleted successfully.`,
+        id: Date.now(),
+      });
+    } catch (err) {
+      setError(err.message || 'Unable to delete product');
+    } finally {
+      setPendingDeleteProduct(null);
     }
   };
 
   return (
     <div className="space-y-6">
+      {statusPopup.visible && (
+        <div className="fixed right-4 top-20 z-[90] w-[min(92vw,420px)]">
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 shadow-xl backdrop-blur">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-bold text-emerald-800">{statusPopup.title}</p>
+                <p className="mt-1 text-sm text-emerald-700">{statusPopup.message}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setStatusPopup((prev) => ({ ...prev, visible: false }))}
+                className="rounded-md px-2 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {pendingDeleteProduct && (
+        <div className="fixed inset-0 z-[95] flex items-center justify-center bg-slate-950/40 px-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+            <div className="mb-4 flex items-start gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-red-100 text-red-600">
+                <UiIcon name="trash" className="h-5 w-5" />
+              </div>
+              <div>
+                <h4 className="text-lg font-bold text-slate-900">Delete Product?</h4>
+                <p className="mt-1 text-sm text-slate-600">
+                  Are you sure you want to delete <span className="font-semibold text-slate-900">{pendingDeleteProduct.name}</span>?
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setPendingDeleteProduct(null)}
+                className="flex-1 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                className="flex-1 rounded-xl bg-red-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-red-700"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h3 className="flex items-center gap-2 text-2xl font-bold text-primary">
           <UiIcon name="box" className="h-6 w-6" />
@@ -514,6 +760,13 @@ function ProductManagement() {
             <div className="bg-green-50 border-2 border-green-500 text-green-700 p-4 rounded-lg mb-6 inline-flex items-center gap-2">
               <UiIcon name="check" className="h-5 w-5" />
               {success}
+            </div>
+          )}
+
+          {isPreparingEdit && (
+            <div className="bg-slate-50 border-2 border-slate-300 text-slate-700 p-4 rounded-lg mb-6 inline-flex items-center gap-2">
+              <UiIcon name="loading" className="h-5 w-5" />
+              Preparing product editor...
             </div>
           )}
 
@@ -569,7 +822,7 @@ function ProductManagement() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-gray-700 font-semibold mb-2">
-                  Price $ {formData.productType === PRODUCT_TYPES.CUSTOM ? '(optional)' : '*'}
+                  Price £ {formData.productType === PRODUCT_TYPES.CUSTOM ? '(optional)' : '*'}
                 </label>
                 <input
                   type="number"
@@ -584,7 +837,7 @@ function ProductManagement() {
               </div>
               {formData.productType !== PRODUCT_TYPES.CUSTOM && (
                 <div>
-                  <label className="block text-gray-700 font-semibold mb-2">Sale Price $ (optional)</label>
+                  <label className="block text-gray-700 font-semibold mb-2">Sale Price £ (optional)</label>
                   <input
                     type="number"
                     name="salePrice"
@@ -722,13 +975,27 @@ function ProductManagement() {
                   ))}
                 </div>
                 <div className="mt-3">
-                  <button
-                    type="button"
-                    onClick={handleAddVariantGroup}
-                    className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white transition hover:bg-red-800"
-                  >
-                    + Add Attribute
-                  </button>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={handleAddVariantGroup}
+                      className="rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white transition hover:bg-red-800"
+                    >
+                      + Add Attribute
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleOpenVariantGrid}
+                      className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
+                    >
+                      Open Variant Grid
+                    </button>
+                    {formData.variantPricing.length > 0 && (
+                      <p className="text-sm text-slate-500">
+                        {formData.variantPricing.length} combination{formData.variantPricing.length === 1 ? '' : 's'} ready
+                      </p>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
@@ -739,10 +1006,21 @@ function ProductManagement() {
                 name="description"
                 value={formData.description}
                 onChange={handleInputChange}
-                rows="3"
+                rows="4"
                 className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:border-primary focus:outline-none"
                 required
               />
+            </div>
+
+            <div>
+              <label className="block text-gray-700 font-semibold mb-2">Additional Information</label>
+              <ProductContentEditor
+                value={formData.additionalInformation}
+                onChange={(nextValue) => setFormData((prev) => ({ ...prev, additionalInformation: nextValue }))}
+              />
+              <p className="mt-3 text-sm text-slate-500">
+                Stored as one structured object in `additionalInformation`, which maps cleanly to a single JSON column in a backend product table.
+              </p>
             </div>
 
             <div className="rounded-2xl border-2 border-slate-200 bg-slate-50/60 p-4 sm:p-5">
@@ -846,7 +1124,7 @@ function ProductManagement() {
                   </li>
                 ))}
               </ul>
-              <p className="mt-2 text-xs text-slate-500">Upload at least 5 images (up to 10). Drag to reorder; first image is always the main image.</p>
+              <p className="mt-2 text-xs text-slate-500">Upload as many images as you want (up to 10). Drag to reorder; the first image is always the main image.</p>
             </div>
 
             <div className="rounded-2xl border-2 border-slate-200 bg-slate-50/60 p-4 sm:p-5">
@@ -972,6 +1250,26 @@ function ProductManagement() {
               </div>
             </div>
 
+            {/* Subcategories */}
+            {availableSubcategories.length > 0 && (
+              <div>
+                <label className="block text-gray-700 font-semibold mb-3">Select Subcategories (optional)</label>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {availableSubcategories.map((subcategory) => (
+                    <label key={subcategory.name} className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.subcategories.includes(subcategory.name)}
+                        onChange={() => handleSubcategoryToggle(subcategory.name)}
+                        className="w-4 h-4 rounded border-gray-300"
+                      />
+                      <span className="text-gray-700">{subcategory.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Industries */}
             <div>
               <label className="block text-gray-700 font-semibold mb-3">Select Industries (optional)</label>
@@ -994,11 +1292,12 @@ function ProductManagement() {
             <div className="flex gap-4 pt-4 border-t-2 border-gray-200">
               <button
                 type="submit"
-                className="flex-1 bg-primary text-white py-3 rounded-lg font-bold hover:bg-red-800 transition"
+                disabled={isSaving}
+                className="flex-1 rounded-lg bg-primary py-3 font-bold text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:bg-slate-400"
               >
                 <span className="inline-flex items-center gap-2">
                   <UiIcon name={editingId ? 'save' : 'check'} className="h-4 w-4" />
-                  {editingId ? 'Update Product' : 'Add Product'}
+                  {isSaving ? 'Saving...' : editingId ? 'Update Product' : 'Add Product'}
                 </span>
               </button>
               <button
@@ -1016,55 +1315,126 @@ function ProductManagement() {
         </div>
       )}
 
+      {showAddForm && showVariantGrid && formData.productType === PRODUCT_TYPES.VARIABLE && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 py-6">
+          <div className="w-full max-w-5xl rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+              <div>
+                <h4 className="text-xl font-bold text-slate-900">Variant Price Grid</h4>
+                <p className="text-sm text-slate-500">
+                  One row per attribute combination. Add the selling price for each combination.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowVariantGrid(false)}
+                className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-bold text-slate-600 transition hover:bg-slate-50"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="max-h-[70vh] overflow-auto px-6 py-5">
+              <table className="min-w-full border-separate border-spacing-0 overflow-hidden rounded-xl border border-slate-200">
+                <thead className="bg-slate-100">
+                  <tr>
+                    {getFinalizedVariantGroups(formData.variantGroups).map((group) => (
+                      <th key={group.attribute} className="border-b border-slate-200 px-4 py-3 text-left text-sm font-bold text-slate-700">
+                        {group.attribute}
+                      </th>
+                    ))}
+                    <th className="border-b border-slate-200 px-4 py-3 text-left text-sm font-bold text-slate-700">
+                      Price
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {formData.variantPricing.map((row, rowIndex) => (
+                    <tr key={getVariantPricingKey(row.attributes || {}) || `variant-row-${rowIndex}`} className="bg-white">
+                      {getFinalizedVariantGroups(formData.variantGroups).map((group) => (
+                        <td key={`${rowIndex}-${group.attribute}`} className="border-b border-slate-100 px-4 py-3 text-sm text-slate-700">
+                          {row.attributes?.[group.attribute] || '-'}
+                        </td>
+                      ))}
+                      <td className="border-b border-slate-100 px-4 py-3">
+                        <input
+                          type="number"
+                          value={row.price}
+                          onChange={(e) => handleVariantGridPriceChange(rowIndex, e.target.value)}
+                          placeholder={formData.price ? `Base ${formData.price}` : '0.00'}
+                          step="0.01"
+                          className="w-36 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary focus:outline-none"
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex justify-end border-t border-slate-200 px-6 py-4">
+              <button
+                type="button"
+                onClick={() => setShowVariantGrid(false)}
+                className="rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-white transition hover:bg-red-800"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Products List */}
       {!showAddForm && (
         <div className="bg-white rounded-xl shadow-md p-6">
           <h4 className="text-xl font-bold text-gray-800 mb-6">All Products ({products.length})</h4>
-          <div className="overflow-x-auto">
-            <table className="w-full">
+          <div>
+            <table className="w-full table-fixed">
               <thead className="bg-gray-100">
                 <tr>
-                  <th className="px-6 py-3 text-left font-semibold text-gray-700">ID</th>
-                  <th className="px-6 py-3 text-left font-semibold text-gray-700">Name</th>
-                  <th className="px-6 py-3 text-left font-semibold text-gray-700">Type</th>
-                  <th className="px-6 py-3 text-left font-semibold text-gray-700">Price</th>
-                  <th className="px-6 py-3 text-left font-semibold text-gray-700">Images</th>
-                  <th className="px-6 py-3 text-left font-semibold text-gray-700">Stock</th>
-                  <th className="px-6 py-3 text-left font-semibold text-gray-700">Categories</th>
-                  <th className="px-6 py-3 text-left font-semibold text-gray-700">Status</th>
-                  <th className="px-6 py-3 text-left font-semibold text-gray-700">Actions</th>
+                  <th className="w-[5%] px-3 py-3 text-left text-sm font-semibold text-gray-700">ID</th>
+                  <th className="w-[16%] px-3 py-3 text-left text-sm font-semibold text-gray-700">Name</th>
+                  <th className="w-[9%] px-3 py-3 text-left text-sm font-semibold text-gray-700">Type</th>
+                  <th className="w-[10%] px-3 py-3 text-left text-sm font-semibold text-gray-700">Price</th>
+                  <th className="w-[6%] px-3 py-3 text-left text-sm font-semibold text-gray-700">Images</th>
+                  <th className="w-[9%] px-3 py-3 text-left text-sm font-semibold text-gray-700">Stock</th>
+                  <th className="w-[13%] px-3 py-3 text-left text-sm font-semibold text-gray-700">Categories</th>
+                  <th className="w-[13%] px-3 py-3 text-left text-sm font-semibold text-gray-700">Subcategories</th>
+                  <th className="w-[9%] px-3 py-3 text-left text-sm font-semibold text-gray-700">Status</th>
+                  <th className="w-[10%] px-3 py-3 text-left text-sm font-semibold text-gray-700">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {products.map((product) => (
                   <tr key={product.id} className="border-b border-gray-200 hover:bg-gray-50">
-                    <td className="px-6 py-4 font-semibold text-gray-800">#{product.id}</td>
-                    <td className="px-6 py-4 font-semibold text-gray-800">{product.name}</td>
-                    <td className="px-6 py-4 text-sm font-semibold text-gray-700 capitalize">
+                    <td className="px-3 py-4 align-top text-sm font-semibold text-gray-800">#{product.id}</td>
+                    <td className="px-3 py-4 align-top text-sm font-semibold text-gray-800 break-words">{product.name}</td>
+                    <td className="px-3 py-4 align-top text-sm font-semibold text-gray-700 capitalize break-words">
                       {resolveProductType(product)}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 py-4 align-top">
                       {resolveProductType(product) === PRODUCT_TYPES.CUSTOM ? (
-                        <span className="font-bold text-slate-600">Custom Pricing</span>
+                        <span className="text-sm font-bold text-slate-600">Custom Pricing</span>
                       ) : (
-                        <>
-                          <span className="font-bold text-accent">${product.price}</span>
+                        <div className="break-words">
+                          <span className="text-sm font-bold text-accent">£{product.price}</span>
                           {product.salePrice && (
-                            <span className="text-sm text-gray-600 ml-2 line-through">${product.salePrice}</span>
+                            <span className="ml-2 text-xs text-gray-600 line-through">£{product.salePrice}</span>
                           )}
-                        </>
+                        </div>
                       )}
                     </td>
-                    <td className="px-6 py-4 font-semibold text-gray-800">
+                    <td className="px-3 py-4 align-top text-sm font-semibold text-gray-800">
                       {1 + (product.galleryImages?.length || 0)}
                     </td>
-                    <td className="px-6 py-4">
-                      <p className="font-bold text-gray-800">{product.inventory?.onHand ?? 0}</p>
+                    <td className="px-3 py-4 align-top">
+                      <p className="text-sm font-bold text-gray-800">{product.inventory?.onHand ?? 0}</p>
                       <p className="text-xs text-gray-500">
                         Avl: {Math.max((product.inventory?.onHand ?? 0) - (product.inventory?.reserved ?? 0), 0)}
                       </p>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 py-4 align-top">
                       <div className="flex flex-wrap gap-1">
                         {product.categories.slice(0, 2).map((cat) => (
                           <span key={cat} className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
@@ -1076,22 +1446,41 @@ function ProductManagement() {
                         )}
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 py-4 align-top">
+                      <div className="flex flex-wrap gap-1">
+                        {(product.subcategories || []).length > 0 ? (
+                          <>
+                            {(product.subcategories || []).slice(0, 2).map((subcategory) => (
+                              <span key={subcategory} className="bg-emerald-100 text-emerald-800 text-xs px-2 py-1 rounded-full">
+                                {subcategory}
+                              </span>
+                            ))}
+                            {(product.subcategories || []).length > 2 && (
+                              <span className="text-gray-600 text-xs">+{product.subcategories.length - 2}</span>
+                            )}
+                          </>
+                        ) : (
+                          <span className="text-xs text-gray-500">No subcategory</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-3 py-4 align-top">
                       {Math.max((product.inventory?.onHand ?? 0) - (product.inventory?.reserved ?? 0), 0) <= 0 ? (
-                        <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-semibold">
+                        <span className="inline-flex px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold">
                           Out of Stock
                         </span>
                       ) : Math.max((product.inventory?.onHand ?? 0) - (product.inventory?.reserved ?? 0), 0) <= (product.inventory?.reorderLevel ?? 0) ? (
-                        <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-semibold">
+                        <span className="inline-flex px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-xs font-semibold">
                           Low Stock
                         </span>
                       ) : (
-                        <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-semibold">
+                        <span className="inline-flex px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
                           Healthy
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4 space-x-2">
+                    <td className="px-3 py-4 align-top">
+                      <div className="flex flex-col items-start gap-2">
                       <button
                         onClick={() => handleEdit(product)}
                         className="text-blue-600 hover:text-blue-800 font-semibold text-sm"
@@ -1102,7 +1491,8 @@ function ProductManagement() {
                         </span>
                       </button>
                       <button
-                        onClick={() => handleDelete(product.id)}
+                        type="button"
+                        onClick={() => setPendingDeleteProduct({ id: product.id, name: product.name })}
                         className="text-blue-600 hover:text-blue-800 font-semibold text-sm"
                       >
                         <span className="inline-flex items-center gap-1">
@@ -1110,6 +1500,7 @@ function ProductManagement() {
                           Delete
                         </span>
                       </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

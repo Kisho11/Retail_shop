@@ -40,7 +40,7 @@ export const getProductPriceDisplay = (product = {}) => {
     if (rangeMin === rangeMax) {
       return { mode: 'variable', text: `From ${formatMoney(rangeMin)}` };
     }
-    return { mode: 'variable', text: `${formatMoney(rangeMin)} - ${formatMoney(rangeMax)}` };
+    return { mode: 'variable', text: `From ${formatMoney(rangeMin)} - ${formatMoney(rangeMax)}` };
   }
 
   const basePrice = Number(product.salePrice || product.price || 0);

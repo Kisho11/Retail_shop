@@ -15,14 +15,20 @@ function Categories() {
   const { t } = useLanguage();
 
   const [selectedCategory, setSelectedCategory] = useState('__all__');
+  const [selectedSubcategory, setSelectedSubcategory] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showCategoryNav, setShowCategoryNav] = useState(true);
+  const [showSubcategoryNav, setShowSubcategoryNav] = useState(true);
   const [categoryPanelWidth, setCategoryPanelWidth] = useState(430);
+  const [subcategoryPanelWidth, setSubcategoryPanelWidth] = useState(280);
   const [isResizing, setIsResizing] = useState(false);
+  const [isSubcategoryResizing, setIsSubcategoryResizing] = useState(false);
   const [showFloatingExpandButton, setShowFloatingExpandButton] = useState(false);
   const gridRef = useRef(null);
+  const subcategoryGridRef = useRef(null);
   const productsSectionRef = useRef(null);
   const catalogueSectionRef = useRef(null);
+  const previousCompactWidthRef = useRef(430);
   const isCategoryPanelNarrow = showCategoryNav && categoryPanelWidth < 360;
   const normalizedSearch = searchQuery.trim().toLowerCase();
 
@@ -30,6 +36,10 @@ function Categories() {
     const fromAdmin = categories.map((category) => ({
       name: category.name,
       image: category.image || products.find((item) => item.categories?.includes(category.name))?.image || '',
+      subcategories: (category.subcategories || []).map((subCategory) => ({
+        name: subCategory.name,
+        image: subCategory.image || products.find((item) => item.subcategories?.includes(subCategory.name))?.image || category.image || '',
+      })),
     }));
 
     return [{ name: '__all__', image: '/store-counter.jpg' }, ...fromAdmin];
@@ -42,6 +52,7 @@ function Categories() {
         item.name,
         item.description,
         ...(item.categories || []),
+        ...(item.subcategories || []),
       ]
         .filter(Boolean)
         .join(' ')
@@ -55,10 +66,13 @@ function Categories() {
     return categoryItems.filter((category) => {
       if (category.name === '__all__') return true;
       const categoryName = String(category.name || '').toLowerCase();
+      const hasMatchingSubcategory = (category.subcategories || []).some((subCategory) =>
+        String(subCategory.name || '').toLowerCase().includes(normalizedSearch)
+      );
       const hasMatchingProduct = searchedProducts.some((item) =>
         (item.categories || []).includes(category.name)
       );
-      return categoryName.includes(normalizedSearch) || hasMatchingProduct;
+      return categoryName.includes(normalizedSearch) || hasMatchingSubcategory || hasMatchingProduct;
     });
   }, [categoryItems, normalizedSearch, searchedProducts]);
 
@@ -68,23 +82,67 @@ function Categories() {
       (item.categories || []).forEach((name) => {
         counts[name] = (counts[name] || 0) + 1;
       });
+      (item.subcategories || []).forEach((name) => {
+        counts[name] = (counts[name] || 0) + 1;
+      });
     });
     return counts;
   }, [searchedProducts]);
 
   const filteredProducts = useMemo(() => {
+    if (selectedSubcategory) {
+      return searchedProducts.filter((item) => item.subcategories?.includes(selectedSubcategory));
+    }
     if (selectedCategory === '__all__') return searchedProducts;
     return searchedProducts.filter((item) => item.categories?.includes(selectedCategory));
-  }, [searchedProducts, selectedCategory]);
+  }, [searchedProducts, selectedCategory, selectedSubcategory]);
 
   const selectedCategoryMeta = useMemo(
     () => categoryItems.find((item) => item.name === selectedCategory),
     [categoryItems, selectedCategory]
   );
 
+  const selectedSubcategoryMeta = useMemo(
+    () => selectedCategoryMeta?.subcategories?.find((item) => item.name === selectedSubcategory) || null,
+    [selectedCategoryMeta, selectedSubcategory]
+  );
+
+  const selectedCategorySubcategories = useMemo(
+    () => (selectedCategoryMeta?.name && selectedCategoryMeta.name !== '__all__' ? selectedCategoryMeta.subcategories || [] : []),
+    [selectedCategoryMeta]
+  );
+
+  useEffect(() => {
+    if (selectedCategorySubcategories.length > 0) {
+      setShowSubcategoryNav(true);
+    } else {
+      setShowSubcategoryNav(false);
+    }
+  }, [selectedCategorySubcategories]);
+
+  useEffect(() => {
+    if (selectedCategorySubcategories.length > 0 && showSubcategoryNav) {
+      setCategoryPanelWidth((prev) => {
+        previousCompactWidthRef.current = Math.min(prev, 430);
+        return Math.max(prev, 620);
+      });
+      return;
+    }
+
+    setCategoryPanelWidth((prev) => {
+      if (prev <= 430) return prev;
+      return previousCompactWidthRef.current || 430;
+    });
+  }, [selectedCategorySubcategories.length, showSubcategoryNav]);
+
   const handleResizeStart = useCallback((event) => {
     event.preventDefault();
     setIsResizing(true);
+  }, []);
+
+  const handleSubcategoryResizeStart = useCallback((event) => {
+    event.preventDefault();
+    setIsSubcategoryResizing(true);
   }, []);
 
   useEffect(() => {
@@ -93,7 +151,7 @@ function Categories() {
     const handleMouseMove = (event) => {
       if (!gridRef.current) return;
       const bounds = gridRef.current.getBoundingClientRect();
-      const nextWidth = Math.min(Math.max(event.clientX - bounds.left, 280), 640);
+      const nextWidth = Math.min(Math.max(event.clientX - bounds.left, 280), 900);
       setCategoryPanelWidth(nextWidth);
     };
 
@@ -113,6 +171,33 @@ function Categories() {
       document.body.style.cursor = '';
     };
   }, [isResizing]);
+
+  useEffect(() => {
+    if (!isSubcategoryResizing) return undefined;
+
+    const handleMouseMove = (event) => {
+      if (!subcategoryGridRef.current) return;
+      const bounds = subcategoryGridRef.current.getBoundingClientRect();
+      const nextWidth = Math.min(Math.max(bounds.right - event.clientX, 220), Math.max(bounds.width - 280, 220));
+      setSubcategoryPanelWidth(nextWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsSubcategoryResizing(false);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    document.body.style.userSelect = 'none';
+    document.body.style.cursor = 'col-resize';
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.userSelect = '';
+      document.body.style.cursor = '';
+    };
+  }, [isSubcategoryResizing]);
 
   useEffect(() => {
     if (showCategoryNav) {
@@ -143,11 +228,33 @@ function Categories() {
 
   useEffect(() => {
     const hasSelected = displayedCategoryItems.some((item) => item.name === selectedCategory);
-    if (!hasSelected) setSelectedCategory('__all__');
+    if (!hasSelected) {
+      setSelectedCategory('__all__');
+      setSelectedSubcategory(null);
+    }
   }, [displayedCategoryItems, selectedCategory]);
 
   const handleCategorySelect = useCallback((categoryName) => {
+    if (categoryName === '__all__') {
+      setSelectedCategory('__all__');
+      setSelectedSubcategory(null);
+      return;
+    }
+
     setSelectedCategory(categoryName);
+    setSelectedSubcategory(null);
+
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      setShowCategoryNav(false);
+      window.requestAnimationFrame(() => {
+        productsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
+  }, []);
+
+  const handleSubcategorySelect = useCallback((categoryName, subcategoryName) => {
+    setSelectedCategory(categoryName);
+    setSelectedSubcategory(subcategoryName);
 
     if (typeof window !== 'undefined' && window.innerWidth < 1024) {
       setShowCategoryNav(false);
@@ -188,40 +295,142 @@ function Categories() {
         {showCategoryNav && (
         <aside className="p-1 lg:sticky lg:top-24 lg:self-start">
           <div className="rounded-xl border border-slate-200 bg-white p-3">
-          <h3 className="mb-4 pb-1 pt-1 text-base font-bold uppercase tracking-[0.12em] text-slate-500">
-            {t('categories.categories')}
-          </h3>
-          <div className={`modern-thin-scrollbar grid max-h-[60vh] gap-2 overflow-y-auto pr-1 lg:max-h-[calc(100vh-11rem)] ${isCategoryPanelNarrow ? 'grid-cols-1' : 'grid-cols-2'}`}>
-            {displayedCategoryItems.map((category) => {
-              const isActive = selectedCategory === category.name;
-              return (
-                <button
-                  key={category.name}
-                  onClick={() => handleCategorySelect(category.name)}
-                  className={`w-full rounded-xl border-0 p-2 text-left transition ${
-                    isActive
-                      ? 'bg-primary text-white'
-                      : 'bg-white hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 p-1">
-                    <div className="h-12 w-12 overflow-hidden rounded-lg bg-slate-100">
-                      {category.image ? (
-                        <img src={category.image} alt={category.name} className="h-full w-full object-cover" />
-                      ) : null}
-                    </div>
-                    <div className="min-w-0">
-                      <p className={`truncate text-sm font-bold ${isActive ? 'text-white' : 'text-slate-900'}`}>
-                        {category.name === '__all__' ? t('categories.allProducts') : category.name}
-                      </p>
-                      <p className={`text-xs font-semibold ${isActive ? 'text-blue-100' : 'text-slate-500'}`}>
-                        {categoryCounts[category.name] || 0} {t('categories.items')}
-                      </p>
-                    </div>
-                  </div>
-                </button>
-              );
-            })}
+          <div
+            ref={subcategoryGridRef}
+            className={`grid gap-4 ${
+              selectedCategorySubcategories.length > 0
+                ? showSubcategoryNav
+                  ? 'lg:[grid-template-columns:var(--subcategory-layout)]'
+                  : 'lg:[grid-template-columns:minmax(0,1fr)_28px]'
+                : 'grid-cols-1'
+            }`}
+            style={{
+              '--subcategory-layout': `minmax(280px, calc(100% - ${subcategoryPanelWidth + 28}px)) 28px ${subcategoryPanelWidth}px`,
+            }}
+          >
+            <div>
+              <h3 className="mb-4 pb-1 pt-1 text-base font-bold uppercase tracking-[0.12em] text-slate-500">
+                {t('categories.categories')}
+              </h3>
+              <div className={`modern-thin-scrollbar grid max-h-[60vh] gap-2 overflow-y-auto pr-1 lg:max-h-[calc(100vh-11rem)] ${
+                selectedCategorySubcategories.length > 0 && showSubcategoryNav
+                  ? 'grid-cols-1'
+                  : isCategoryPanelNarrow
+                    ? 'grid-cols-1'
+                    : 'grid-cols-2'
+              }`}>
+                {displayedCategoryItems.map((category) => {
+                  const isActive = selectedCategory === category.name;
+                  const hasSubcategories = (category.subcategories || []).length > 0;
+                  return (
+                    <button
+                      key={category.name}
+                      type="button"
+                      onClick={() => handleCategorySelect(category.name)}
+                      className={`w-full rounded-xl p-2 text-left transition ${
+                        isActive ? 'bg-primary text-white' : 'bg-white hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 p-1">
+                        <div className="h-12 w-12 overflow-hidden rounded-lg bg-slate-100">
+                          {category.image ? (
+                            <img src={category.image} alt={category.name} className="h-full w-full object-cover" />
+                          ) : null}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className={`truncate text-sm font-bold ${isActive ? 'text-white' : 'text-slate-900'}`}>
+                              {category.name === '__all__' ? t('categories.allProducts') : category.name}
+                            </p>
+                            {hasSubcategories && (
+                              <span className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                                isActive ? 'bg-white/15 text-white' : 'bg-slate-100 text-slate-700'
+                              }`}>
+                                +
+                              </span>
+                            )}
+                          </div>
+                          <p className={`text-xs font-semibold ${isActive ? 'text-blue-100' : 'text-slate-500'}`}>
+                            {categoryCounts[category.name] || 0} {t('categories.items')}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {selectedCategorySubcategories.length > 0 && (
+              <div className="relative hidden lg:block">
+                {showSubcategoryNav && (
+                  <div
+                    role="separator"
+                    aria-orientation="vertical"
+                    aria-label="Resize category and subcategory area"
+                    onMouseDown={handleSubcategoryResizeStart}
+                    className="absolute inset-y-0 left-1/2 z-10 w-4 -translate-x-1/2 cursor-col-resize"
+                  />
+                )}
+                <div className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-red-500" />
+                <div className="sticky top-1/2 z-10 flex -translate-y-1/2 justify-center">
+                  <button
+                    type="button"
+                    onClick={() => setShowSubcategoryNav((prev) => !prev)}
+                    aria-label={showSubcategoryNav ? 'Hide subcategory navigation' : 'Show subcategory navigation'}
+                    className={`inline-flex h-11 items-center justify-center rounded-full text-xl font-bold shadow-md transition ${
+                      showSubcategoryNav
+                        ? 'w-11 border border-slate-400 bg-white text-slate-800 hover:border-slate-500 hover:bg-slate-50'
+                        : 'w-auto gap-2 border border-primary bg-primary px-3 text-white hover:bg-red-700'
+                    }`}
+                  >
+                    <span>{showSubcategoryNav ? '\u203A' : '\u2039'}</span>
+                    {!showSubcategoryNav && <span className="text-xs font-extrabold uppercase tracking-[0.08em]">Subcategories</span>}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {selectedCategorySubcategories.length > 0 && showSubcategoryNav && (
+              <div>
+                <h3 className="mb-4 pb-1 pt-1 text-base font-bold uppercase tracking-[0.12em] text-slate-500">
+                  Subcategories
+                </h3>
+                <div className="modern-thin-scrollbar grid max-h-[60vh] grid-cols-1 gap-2 overflow-y-auto pr-1 lg:max-h-[calc(100vh-11rem)]">
+                  {selectedCategorySubcategories.map((subCategory) => {
+                    const isSubcategoryActive = selectedSubcategory === subCategory.name;
+                    return (
+                      <button
+                        key={subCategory.name}
+                        type="button"
+                        onClick={() => handleSubcategorySelect(selectedCategory, subCategory.name)}
+                        className={`w-full rounded-xl p-2 text-left transition ${
+                          isSubcategoryActive
+                            ? 'bg-primary text-white'
+                            : 'bg-white hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 p-1">
+                          <div className="h-12 w-12 overflow-hidden rounded-lg bg-slate-100">
+                            {subCategory.image ? (
+                              <img src={subCategory.image} alt={subCategory.name} className="h-full w-full object-cover" />
+                            ) : null}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className={`truncate text-sm font-bold ${isSubcategoryActive ? 'text-white' : 'text-slate-900'}`}>
+                              {subCategory.name}
+                            </p>
+                            <p className={`text-xs font-semibold ${isSubcategoryActive ? 'text-blue-100' : 'text-slate-500'}`}>
+                              {categoryCounts[subCategory.name] || 0} {t('categories.items')}
+                            </p>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
           </div>
         </aside>
@@ -287,7 +496,11 @@ function Categories() {
           <div className="mb-4 rounded-2xl border border-slate-200 bg-white/95 p-5 backdrop-blur lg:sticky lg:top-24 lg:z-20">
             <div className="flex items-start justify-between gap-3">
               <h3 className="text-3xl font-bold text-slate-900">
-                {selectedCategory === '__all__' ? t('categories.allProducts') : selectedCategory}
+                {selectedCategory === '__all__'
+                  ? t('categories.allProducts')
+                  : selectedSubcategory
+                    ? `${selectedCategory} / ${selectedSubcategory}`
+                    : selectedCategory}
               </h3>
               {!showCategoryNav && (
                 <button
@@ -323,7 +536,7 @@ function Categories() {
           <div className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white">
             <div className="h-60 bg-slate-100">
               {selectedCategoryMeta?.image ? (
-                <img src={selectedCategoryMeta.image} alt={selectedCategoryMeta.name} className="h-full w-full object-cover" />
+                <img src={(selectedSubcategoryMeta?.image || selectedCategoryMeta.image)} alt={(selectedSubcategoryMeta?.name || selectedCategoryMeta.name)} className="h-full w-full object-cover" />
               ) : (
                 <div className="flex h-full items-center justify-center text-slate-500">{t('categories.noCategoryImage')}</div>
               )}

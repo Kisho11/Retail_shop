@@ -104,6 +104,7 @@ function Checkout() {
         name: item.name,
         quantity: item.quantity,
         price: item.salePrice || item.price,
+        selectedAttributes: item.selectedAttributes || null,
         selectedColor: item.selectedColor || null,
         selectedSize: item.selectedSize || null,
       })),
@@ -363,19 +364,31 @@ function Checkout() {
           <div className="space-y-3 mb-6 pb-6 border-b border-gray-300 max-h-64 overflow-y-auto">
             {cartItems.map((item) => (
               <div key={item.lineId || `${item.id}-${item.selectedColor || ''}-${item.selectedSize || ''}`} className="flex justify-between text-sm bg-white p-3 rounded-lg">
+                {(() => {
+                  const selectedAttributeLabels =
+                    item.selectedAttributes && Object.keys(item.selectedAttributes).length > 0
+                      ? Object.entries(item.selectedAttributes).map(([key, value]) => `${key}: ${value}`)
+                      : [
+                          item.selectedColor ? `Color: ${item.selectedColor}` : null,
+                          item.selectedSize ? `Size: ${item.selectedSize}` : null,
+                        ].filter(Boolean);
+
+                  return (
+                    <>
                 <span className="text-gray-700">
                   <strong>{item.name}</strong> × {item.quantity}
-                  {(item.selectedColor || item.selectedSize) && (
+                  {selectedAttributeLabels.length > 0 && (
                     <span className="block text-xs text-gray-500 mt-1">
-                      {item.selectedColor ? `Color: ${item.selectedColor}` : ''}
-                      {item.selectedColor && item.selectedSize ? ' | ' : ''}
-                      {item.selectedSize ? `Size: ${item.selectedSize}` : ''}
+                      {selectedAttributeLabels.join(' | ')}
                     </span>
                   )}
                 </span>
                 <span className="font-bold text-primary">
-                  ${((item.salePrice || item.price) * item.quantity).toFixed(2)}
+                  £{((item.salePrice || item.price) * item.quantity).toFixed(2)}
                 </span>
+                    </>
+                  );
+                })()}
               </div>
             ))}
           </div>
@@ -383,7 +396,7 @@ function Checkout() {
           <div className="space-y-3 mb-6 pb-6 border-b border-gray-300">
             <div className="flex justify-between text-gray-700">
               <span>Subtotal:</span>
-              <span className="font-semibold">${subtotal.toFixed(2)}</span>
+              <span className="font-semibold">£{subtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between text-gray-700">
               <span>Shipping:</span>
@@ -391,13 +404,13 @@ function Checkout() {
             </div>
             <div className="flex justify-between text-gray-700">
               <span>Tax (10%):</span>
-              <span className="font-semibold">${taxAmount.toFixed(2)}</span>
+              <span className="font-semibold">£{taxAmount.toFixed(2)}</span>
             </div>
           </div>
 
           <div className="flex justify-between text-xl font-bold text-primary bg-white p-4 rounded-lg">
             <span>Total:</span>
-            <span>${totalWithTax.toFixed(2)}</span>
+            <span>£{totalWithTax.toFixed(2)}</span>
           </div>
         </div>
       </div>

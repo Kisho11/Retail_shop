@@ -13,7 +13,6 @@ function ProductCard({ product }) {
   };
 
   const hasSale = product.salePrice && Number(product.salePrice) < Number(product.price);
-
   return (
     <article className="group flex h-full flex-col overflow-hidden rounded-xl border border-slate-200 bg-white transition duration-300 hover:-translate-y-1 hover:shadow-xl sm:rounded-2xl">
       <Link to={productUrl} className="flex flex-1 flex-col" aria-label={product.name}>
@@ -44,11 +43,11 @@ function ProductCard({ product }) {
           <div className="mb-2">
             {hasSale ? (
               <div className="flex items-end gap-2">
-                <span className="text-[10px] text-slate-400 line-through sm:text-xs">${product.price}</span>
-                <span className="text-sm font-extrabold text-slate-900 sm:text-xl">${product.salePrice}</span>
+                <span className="text-[10px] text-slate-400 line-through sm:text-xs">£{product.price}</span>
+                <span className="text-sm font-extrabold text-slate-900 sm:text-xl">£{product.salePrice}</span>
               </div>
             ) : (
-              <span className="text-sm font-extrabold text-slate-900 sm:text-xl">${product.price}</span>
+              <span className="text-sm font-extrabold text-slate-900 sm:text-xl">£{product.price}</span>
             )}
           </div>
 

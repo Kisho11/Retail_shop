@@ -27,35 +27,23 @@ function Home() {
       <Slider />
 
       <section className="shell fade-up mt-8">
-        {/* <div className="soft-section grid gap-8 p-6 sm:p-10 lg:grid-cols-[1.2fr_0.8fr]">
-          <div>
-            <p className="mb-3 text-xs font-bold uppercase tracking-[0.16em] text-blue-700">Modern retail infrastructure</p>
-            <h2 className="mb-4 text-3xl font-bold text-slate-900 sm:text-4xl">Everything your store needs to look premium and perform daily</h2>
-            <p className="max-w-2xl text-slate-700">
-              Elamshelf provides tailored retail shelving, display counters, and modular systems for supermarkets,
-              boutiques, pharmacies, bakeries, and specialty stores.
-            </p>
-            <div className="mt-7 flex flex-wrap gap-3">
-              <Link to="/products-by-industry" className="btn-primary rounded-full px-6 py-3 text-sm font-bold">
-                Shop by Industry
-              </Link>
-              <Link to="/showroom" className="btn-secondary rounded-full px-6 py-3 text-sm font-bold">
-                Visit Showroom
-              </Link>
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-lg sm:p-10">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Account access</p>
+              <h2 className="mt-2 text-3xl font-bold text-slate-900 sm:text-4xl">Customer login is here</h2>
+              <p className="mt-3 max-w-2xl text-slate-600">
+                Use the button below for customer sign in. Admin and manager access is available separately via a link.
+              </p>
             </div>
+            <Link
+              to="/login?mode=customer-signin"
+              className="inline-flex h-14 items-center justify-center rounded-full bg-primary px-8 text-sm font-bold text-white transition hover:bg-red-700"
+            >
+              {t('nav.signIn')}
+            </Link>
           </div>
-
-          <div className="surface-card grid gap-4 p-5">
-            {stats.map((stat) => (
-              <div key={stat.label} className="rounded-xl border border-slate-200 bg-white p-4">
-                <p className="text-2xl font-extrabold text-slate-900">{stat.number}</p>
-                <p className="text-sm font-semibold text-slate-600">{stat.label}</p>
-              </div>
-            ))}
-          </div>
-        </div> */}
-
-        
+        </div>
       </section>
 
       <section className="mt-10">

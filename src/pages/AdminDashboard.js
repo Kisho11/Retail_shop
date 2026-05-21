@@ -223,7 +223,7 @@ function AdminDashboard() {
                 <div className="flex justify-between items-start">
                   <div>
                     <p className="text-gray-600 text-sm">Total Revenue</p>
-                    <p className="text-4xl font-bold text-green-700 mt-2">${stats.totalRevenue.toLocaleString()}</p>
+                    <p className="text-4xl font-bold text-green-700 mt-2">£{stats.totalRevenue.toLocaleString()}</p>
                   </div>
                   <UiIcon name="currency" className="h-10 w-10 text-green-700" />
                 </div>

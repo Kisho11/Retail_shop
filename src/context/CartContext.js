@@ -2,17 +2,32 @@ import React, { createContext, useCallback, useContext, useMemo, useState } from
 
 const CartContext = createContext();
 
-const buildLineId = (productId, color, size) => `${productId}::${color || 'default'}::${size || 'default'}`;
+const normalizeAttributes = (attributes = {}) =>
+  Object.fromEntries(
+    Object.entries(attributes)
+      .map(([key, value]) => [`${key || ''}`.trim(), `${value || ''}`.trim()])
+      .filter(([key, value]) => key && value)
+      .sort(([left], [right]) => left.localeCompare(right))
+  );
+
+const buildLineId = (productId, attributes = {}) => {
+  const normalized = normalizeAttributes(attributes);
+  const suffix = Object.entries(normalized)
+    .map(([key, value]) => `${key}:${value}`)
+    .join('|');
+  return `${productId}::${suffix || 'default'}`;
+};
 
 export function CartProvider({ children }) {
   const [cartItems, setCartItems] = useState([]);
   const [cartToast, setCartToast] = useState({ visible: false, message: '', id: null });
 
   const addToCart = useCallback((product, options = {}) => {
-    const selectedColor = options.color || product.colors?.[0] || null;
-    const selectedSize = options.size || product.sizes?.[0] || null;
+    const selectedAttributes = normalizeAttributes(options.attributes || {});
+    const selectedColor = selectedAttributes.Color || selectedAttributes.Colour || options.color || product.colors?.[0] || null;
+    const selectedSize = selectedAttributes.Size || options.size || product.sizes?.[0] || null;
     const selectedQuantity = Math.max(1, Number(options.quantity) || 1);
-    const lineId = buildLineId(product.id, selectedColor, selectedSize);
+    const lineId = buildLineId(product.id, selectedAttributes);
 
     setCartItems((prevItems) => {
       const existingItem = prevItems.find((item) => item.lineId === lineId);
@@ -30,6 +45,7 @@ export function CartProvider({ children }) {
         {
           ...product,
           lineId,
+          selectedAttributes,
           selectedColor,
           selectedSize,
           quantity: selectedQuantity,
@@ -39,8 +55,7 @@ export function CartProvider({ children }) {
 
     const messageBits = [
       `${selectedQuantity} x ${product.name}`,
-      selectedColor ? `Color: ${selectedColor}` : null,
-      selectedSize ? `Size: ${selectedSize}` : null,
+      ...Object.entries(selectedAttributes).map(([key, value]) => `${key}: ${value}`),
     ].filter(Boolean);
 
     setCartToast({
