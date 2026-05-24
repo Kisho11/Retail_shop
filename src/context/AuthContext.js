@@ -89,7 +89,6 @@ const mapManager = (manager) => ({
   phone: manager.phone || '',
   status: manager.is_active ? 'Active' : 'Inactive',
   joinDate: manager.created_at,
-  temporaryPassword: manager.temporary_password || '',
 });
 
 export function AuthProvider({ children }) {
@@ -107,7 +106,9 @@ export function AuthProvider({ children }) {
   }, [user]);
 
   useEffect(() => {
-    writeStorage(CUSTOMER_USERS_KEY, customerUsers);
+    // Never persist passwords — strip them before writing to localStorage.
+    // Offline sign-in only works within the same page session.
+    writeStorage(CUSTOMER_USERS_KEY, customerUsers.map(({ password: _omit, ...rest }) => rest));
   }, [customerUsers]);
 
   const logout = useCallback(() => {
@@ -444,7 +445,6 @@ export function AuthProvider({ children }) {
       return {
         success: true,
         message: data?.message || 'Password reset started successfully.',
-        resetToken: data?.reset_token || '',
       };
     } catch (error) {
       return {

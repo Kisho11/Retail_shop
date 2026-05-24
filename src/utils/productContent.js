@@ -116,7 +116,9 @@ export const sanitizeProductHtml = (value = '') => {
 export const sanitizeMediaUrl = (value = '') => {
   const url = `${value || ''}`.trim();
   if (!url) return '';
-  if (/^(https?:\/\/|\/uploads\/|data:image\/|blob:)/i.test(url)) {
+  // data:image/svg+xml and data:text/* can carry embedded scripts — allow only raster types
+  if (/^data:image\/(jpeg|jpg|png|webp|gif);/i.test(url)) return url;
+  if (/^(https?:\/\/|\/uploads\/|blob:)/i.test(url)) {
     return url;
   }
   return '';

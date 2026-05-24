@@ -1,5 +1,8 @@
 import React from 'react';
+import DOMPurify from 'dompurify';
 import { normalizeProductContent } from '../utils/productContent';
+
+const sanitize = (html) => ({ __html: DOMPurify.sanitize(html || '') });
 
 function ProductContentRenderer({ content }) {
   const normalized = normalizeProductContent(content);
@@ -8,17 +11,17 @@ function ProductContentRenderer({ content }) {
     <div className="space-y-6">
       {normalized.blocks.map((block) => {
         if (block.type === 'heading') {
-          return <div key={block.id} className="text-3xl font-bold text-slate-900" dangerouslySetInnerHTML={{ __html: block.html }} />;
+          return <div key={block.id} className="text-3xl font-bold text-slate-900" dangerouslySetInnerHTML={sanitize(block.html)} />;
         }
 
         if (block.type === 'subheading') {
-          return <div key={block.id} className="text-xl font-bold text-slate-800" dangerouslySetInnerHTML={{ __html: block.html }} />;
+          return <div key={block.id} className="text-xl font-bold text-slate-800" dangerouslySetInnerHTML={sanitize(block.html)} />;
         }
 
         if (block.type === 'quote') {
           return (
             <blockquote key={block.id} className="rounded-r-2xl border-l-4 border-primary bg-slate-50 px-5 py-4 italic text-slate-700">
-              <div dangerouslySetInnerHTML={{ __html: block.html }} />
+              <div dangerouslySetInnerHTML={sanitize(block.html)} />
             </blockquote>
           );
         }
@@ -73,7 +76,7 @@ function ProductContentRenderer({ content }) {
           );
         }
 
-        return <div key={block.id} className="text-base leading-7 text-slate-700" dangerouslySetInnerHTML={{ __html: block.html }} />;
+        return <div key={block.id} className="text-base leading-7 text-slate-700" dangerouslySetInnerHTML={sanitize(block.html)} />;
       })}
     </div>
   );

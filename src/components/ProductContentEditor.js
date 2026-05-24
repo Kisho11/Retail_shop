@@ -1,5 +1,8 @@
 import React, { useEffect, useRef } from 'react';
+import DOMPurify from 'dompurify';
 import UiIcon from './UiIcon';
+
+const SAFE_URL_PATTERN = /^(https?:|mailto:|tel:)/i;
 import {
   createDefaultProductContent,
   createImageBlock,
@@ -27,8 +30,9 @@ function ProductContentEditor({ value, onChange }) {
       if (!['paragraph', 'heading', 'subheading', 'quote'].includes(block.type)) return;
       const node = blockRefs.current[block.id];
       if (!node) return;
-      if (node.innerHTML !== block.html) {
-        node.innerHTML = block.html || '';
+      const clean = DOMPurify.sanitize(block.html || '');
+      if (node.innerHTML !== clean) {
+        node.innerHTML = clean;
       }
     });
   }, [content]);
@@ -85,14 +89,18 @@ function ProductContentEditor({ value, onChange }) {
   };
 
   const applyLink = () => {
-    const href = window.prompt('Enter a URL');
+    const href = (window.prompt('Enter a URL') || '').trim();
     if (!href) return;
+    if (!SAFE_URL_PATTERN.test(href)) {
+      window.alert('Invalid URL. Only http, https, mailto, and tel links are allowed.');
+      return;
+    }
     const activeBlock = content.blocks.find((block) => block.id === activeBlockIdRef.current);
     const node = activeBlock ? blockRefs.current[activeBlock.id] : null;
     if (!node) return;
     node.focus();
     document.execCommand('createLink', false, href);
-    updateBlock(activeBlock.id, (block) => ({ ...block, html: node.innerHTML }));
+    updateBlock(activeBlock.id, (block) => ({ ...block, html: DOMPurify.sanitize(node.innerHTML) }));
   };
 
   const handleImageUpload = (blockId, file) => {
