@@ -1,15 +1,16 @@
 import React, { useMemo } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
-import products from '../data/products';
 import ProductCard from '../components/ProductCard';
 import Seo from '../components/Seo';
 import { useLanguage } from '../context/LanguageContext';
 import BackButton from '../components/BackButton';
+import { useProducts } from '../context/ProductContext';
 
 function ProductsByIndustry() {
   const { industry } = useParams();
   const [searchParams] = useSearchParams();
   const { t } = useLanguage();
+  const { products } = useProducts();
   const formattedIndustry = useMemo(
     () => (industry ? decodeURIComponent(industry).replace(/-/g, ' ') : null),
     [industry]
@@ -54,7 +55,7 @@ function ProductsByIndustry() {
 
         return searchableContent.includes(normalizedQuery);
       }),
-    [formattedIndustry, normalizedQuery]
+    [formattedIndustry, normalizedQuery, products]
   );
 
   return (

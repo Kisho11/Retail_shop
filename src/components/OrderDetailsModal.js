@@ -1,12 +1,25 @@
 import React from 'react';
 
 function formatCurrency(value) {
-  return `$${(Number(value) || 0).toFixed(2)}`;
+  return `£${(Number(value) || 0).toFixed(2)}`;
 }
 
 function formatDateTime(order) {
   if (!order?.createdAt) return `${order?.date || '-'} ${order?.orderTime || ''}`.trim();
   return new Date(order.createdAt).toLocaleString();
+}
+
+function formatVariant(item) {
+  if (item?.selectedAttributes && Object.keys(item.selectedAttributes).length > 0) {
+    return Object.entries(item.selectedAttributes)
+      .map(([key, value]) => `${key}: ${value}`)
+      .join(' | ');
+  }
+
+  return [
+    item?.selectedColor ? `Color: ${item.selectedColor}` : null,
+    item?.selectedSize ? `Size: ${item.selectedSize}` : null,
+  ].filter(Boolean).join(' | ');
 }
 
 function OrderDetailsModal({ order, onClose, accentClass = 'text-primary' }) {
@@ -104,9 +117,7 @@ function OrderDetailsModal({ order, onClose, accentClass = 'text-primary' }) {
                       <td className="px-3 py-2">{formatCurrency(item.price)}</td>
                       <td className="px-3 py-2">{formatCurrency((Number(item.price) || 0) * (Number(item.quantity) || 0))}</td>
                       <td className="px-3 py-2">
-                        {item.selectedColor || item.selectedSize
-                          ? `${item.selectedColor ? `Color: ${item.selectedColor}` : ''}${item.selectedColor && item.selectedSize ? ' | ' : ''}${item.selectedSize ? `Size: ${item.selectedSize}` : ''}`
-                          : '-'}
+                        {formatVariant(item) || '-'}
                       </td>
                     </tr>
                   ))}

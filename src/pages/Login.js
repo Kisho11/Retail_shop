@@ -4,6 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import UiIcon from '../components/UiIcon';
 import Seo from '../components/Seo';
 
+const MIN_PASSWORD_LENGTH = 8;
+
 function generateCaptcha() {
   const a = Math.floor(Math.random() * 9) + 1;
   const b = Math.floor(Math.random() * 9) + 1;
@@ -20,7 +22,7 @@ function Login() {
   const [searchParams] = useSearchParams();
   const googleBtnRef = useRef(null);
 
-  const { login, signUpCustomer, signInCustomer, resetCustomerPassword, authWithGoogle } = useAuth();
+  const { login, signUpCustomer, signInCustomer, requestPasswordReset, resetPassword, authWithGoogle } = useAuth();
 
   const [mode, setMode] = useState('customer-signin');
   const [name, setName] = useState('');
@@ -29,7 +31,8 @@ function Login() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
-  const [resetPassword, setResetPassword] = useState('');
+  const [resetToken, setResetToken] = useState('');
+  const [newResetPassword, setNewResetPassword] = useState('');
   const [resetConfirmPassword, setResetConfirmPassword] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
@@ -143,45 +146,57 @@ function Login() {
     return true;
   };
 
-  const handleStaffSubmit = (e) => {
+  const handleStaffSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccessMessage('');
     if (!ensureCaptcha()) return;
 
     setLoading(true);
-    const result = login(email, password);
-    if (result.success) {
-      navigate(result.user.role === 'admin' ? '/admin/dashboard' : '/manager/dashboard');
-    } else {
-      setError(result.error);
+    try {
+      const result = await login(email, password);
+      if (result.success) {
+        navigate(result.user.role === 'admin' ? '/admin/dashboard' : result.user.role === 'manager' ? '/manager/dashboard' : '/customer-portal');
+      } else {
+        setError(result.error);
+      }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
-  const handleCustomerSignIn = (e) => {
+  const handleCustomerSignIn = async (e) => {
     e.preventDefault();
     setError('');
     setSuccessMessage('');
     if (!ensureCaptcha()) return;
 
     setLoading(true);
-    const result = signInCustomer(email, password);
-    if (result.success) {
-      navigate('/customer-portal');
-    } else {
-      setError(result.error);
+    try {
+      const result = await signInCustomer(email, password);
+      if (result.success) {
+        navigate(
+          result.user.role === 'admin'
+            ? '/admin/dashboard'
+            : result.user.role === 'manager'
+              ? '/manager/dashboard'
+              : '/customer-portal'
+        );
+      } else {
+        setError(result.error);
+      }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
-  const handleCustomerSignUp = (e) => {
+  const handleCustomerSignUp = async (e) => {
     e.preventDefault();
     setError('');
     setSuccessMessage('');
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters long.');
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      setError(`Password must be at least ${MIN_PASSWORD_LENGTH} characters long.`);
       return;
     }
 
@@ -193,36 +208,56 @@ function Login() {
     if (!ensureCaptcha()) return;
 
     setLoading(true);
-    const result = signUpCustomer({ name, email, password });
-    if (result.success) {
-      navigate('/customer-portal');
-    } else {
-      setError(result.error);
+    try {
+      const result = await signUpCustomer({ name, email, password });
+      if (result.success) {
+        navigate('/customer-portal');
+      } else {
+        setError(result.error);
+      }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
-  const handleForgotPassword = (e) => {
+  const handleForgotPassword = async (e) => {
     e.preventDefault();
     setError('');
     setSuccessMessage('');
 
     if (!resetEmail.trim()) {
-      setError('Please enter your customer email address.');
+      setError('Please enter your account email address.');
       return;
     }
 
-    if (resetPassword.length < 6) {
-      setError('New password must be at least 6 characters long.');
+    if (!resetToken.trim()) {
+      const result = await requestPasswordReset(resetEmail);
+
+      if (!result.success) {
+        setError(result.error);
+        return;
+      }
+
+      setResetToken(result.resetToken || '');
+      setSuccessMessage(
+        result.resetToken
+          ? 'Reset token generated. Paste or confirm the token below and choose a new password.'
+          : result.message || 'If the account exists, a reset token has been prepared.'
+      );
       return;
     }
 
-    if (resetPassword !== resetConfirmPassword) {
+    if (newResetPassword.length < MIN_PASSWORD_LENGTH) {
+      setError(`New password must be at least ${MIN_PASSWORD_LENGTH} characters long.`);
+      return;
+    }
+
+    if (newResetPassword !== resetConfirmPassword) {
       setError('New passwords do not match.');
       return;
     }
 
-    const result = resetCustomerPassword(resetEmail, resetPassword);
+    const result = await resetPassword(resetToken, newResetPassword);
 
     if (!result.success) {
       setError(result.error);
@@ -231,22 +266,11 @@ function Login() {
 
     setEmail(resetEmail.trim().toLowerCase());
     setPassword('');
-    setResetPassword('');
+    setResetToken('');
+    setNewResetPassword('');
     setResetConfirmPassword('');
     setShowForgotPassword(false);
-    setSuccessMessage('Password updated. You can now sign in with your new password.');
-  };
-
-  const demoLogin = (role) => {
-    setMode('staff-signin');
-    setError('');
-    if (role === 'admin') {
-      setEmail('admin@elamshelf.com');
-      setPassword('admin123');
-    } else {
-      setEmail('manager@elamshelf.com');
-      setPassword('manager123');
-    }
+    setSuccessMessage(result.message || 'Password updated. You can now sign in with your new password.');
   };
 
   const currentSubmitHandler =
@@ -269,26 +293,35 @@ function Login() {
         </div>
 
         <div className="max-h-[calc(100svh-8.5rem)] overflow-y-auto rounded-2xl bg-white p-3 shadow-2xl sm:max-h-[calc(100svh-10rem)] sm:p-8">
-          <div className="mb-3 grid grid-cols-3 gap-2 sm:mb-6">
-            <button
-              onClick={() => setMode('customer-signin')}
-              className={`rounded-lg px-2 py-2 text-[11px] font-bold sm:px-3 sm:text-xs ${mode === 'customer-signin' ? 'bg-primary text-white' : 'bg-slate-100 text-slate-700'}`}
-            >
-              Customer Sign In
-            </button>
-            <button
-              onClick={() => setMode('customer-signup')}
-              className={`rounded-lg px-2 py-2 text-[11px] font-bold sm:px-3 sm:text-xs ${mode === 'customer-signup' ? 'bg-primary text-white' : 'bg-slate-100 text-slate-700'}`}
-            >
-              Customer Sign Up
-            </button>
-            <button
-              onClick={() => setMode('staff-signin')}
-              className={`rounded-lg px-2 py-2 text-[11px] font-bold sm:px-3 sm:text-xs ${mode === 'staff-signin' ? 'bg-primary text-white' : 'bg-slate-100 text-slate-700'}`}
-            >
-              Staff Login
-            </button>
-          </div>
+          {mode !== 'staff-signin' ? (
+            <>
+              <div className="mb-3 grid grid-cols-2 gap-2 sm:mb-6">
+                <button
+                  onClick={() => setMode('customer-signin')}
+                  className={`rounded-lg px-2 py-2 text-[11px] font-bold sm:px-3 sm:text-xs ${mode === 'customer-signin' ? 'bg-primary text-white' : 'bg-slate-100 text-slate-700'}`}
+                >
+                  Customer Sign In
+                </button>
+                <button
+                  onClick={() => setMode('customer-signup')}
+                  className={`rounded-lg px-2 py-2 text-[11px] font-bold sm:px-3 sm:text-xs ${mode === 'customer-signup' ? 'bg-primary text-white' : 'bg-slate-100 text-slate-700'}`}
+                >
+                  Customer Sign Up
+                </button>
+              </div>
+              {mode === 'customer-signin' && (
+                <div className="mb-4 text-sm text-slate-600">
+                  <span className="font-semibold">Staff login:</span>{' '}
+                  <Link
+                    to="/login?mode=staff-signin"
+                    className="font-semibold text-blue-700 underline hover:text-blue-900"
+                  >
+                    Admin / Manager access
+                  </Link>
+                </div>
+              )}
+            </>
+          ) : null}
 
           <h2 className="mb-3 text-lg font-bold text-primary sm:mb-6 sm:text-2xl">
             {mode === 'customer-signup' && 'Create Customer Account'}
@@ -340,11 +373,12 @@ function Login() {
                 value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none sm:py-2.5"
+                  minLength={MIN_PASSWORD_LENGTH}
                   required
                 />
               </div>
 
-            {mode === 'customer-signin' && (
+            {mode !== 'customer-signup' && (
               <div className="-mt-1 text-right">
                 <button
                   type="button"
@@ -361,24 +395,34 @@ function Login() {
               </div>
             )}
 
-            {mode === 'customer-signin' && showForgotPassword && (
+            {mode !== 'customer-signup' && showForgotPassword && (
               <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
-                <p className="text-sm font-bold text-slate-800">Reset Customer Password</p>
+                <p className="text-sm font-bold text-slate-800">
+                  {mode === 'staff-signin' ? 'Reset Staff Password' : 'Reset Account Password'}
+                </p>
                 <input
                   type="email"
                   value={resetEmail}
                   onChange={(e) => setResetEmail(e.target.value)}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-                  placeholder="Customer email"
+                  placeholder="Account email"
                   required
                 />
                 <input
+                  type="text"
+                  value={resetToken}
+                  onChange={(e) => setResetToken(e.target.value)}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                  placeholder="Reset token"
+                />
+                <input
                   type="password"
-                  value={resetPassword}
-                  onChange={(e) => setResetPassword(e.target.value)}
+                  value={newResetPassword}
+                  onChange={(e) => setNewResetPassword(e.target.value)}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
                   placeholder="New password"
-                  required
+                  minLength={MIN_PASSWORD_LENGTH}
+                  required={Boolean(resetToken.trim())}
                 />
                 <input
                   type="password"
@@ -386,15 +430,21 @@ function Login() {
                   onChange={(e) => setResetConfirmPassword(e.target.value)}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
                   placeholder="Confirm new password"
-                  required
+                  minLength={MIN_PASSWORD_LENGTH}
+                  required={Boolean(resetToken.trim())}
                 />
                 <button
                   type="button"
                   onClick={handleForgotPassword}
                   className="w-full rounded-lg border border-primary bg-white py-2 text-sm font-bold text-primary transition hover:bg-red-50"
                 >
-                  Update Password
+                  {resetToken.trim() ? 'Update Password' : 'Generate Reset Token'}
                 </button>
+                {!resetToken.trim() && (
+                  <p className="text-xs text-slate-500">
+                    Password reset requests are accepted, but token delivery is not shown in the browser.
+                  </p>
+                )}
               </div>
             )}
 
@@ -406,6 +456,7 @@ function Login() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none sm:py-2.5"
+                  minLength={MIN_PASSWORD_LENGTH}
                   required
                 />
               </div>
@@ -458,22 +509,8 @@ function Login() {
           )}
 
           {mode === 'staff-signin' && (
-            <div className="mt-3 space-y-2 border-t border-gray-200 pt-3 sm:mt-6 sm:pt-5">
-              <p className="text-xs text-gray-600 text-center">Demo staff login</p>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  onClick={() => demoLogin('admin')}
-                  className="bg-slate-100 py-2 rounded-lg text-sm font-semibold hover:bg-slate-200"
-                >
-                  Admin Demo
-                </button>
-                <button
-                  onClick={() => demoLogin('manager')}
-                  className="bg-slate-100 py-2 rounded-lg text-sm font-semibold hover:bg-slate-200"
-                >
-                  Manager Demo
-                </button>
-              </div>
+            <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 sm:mt-6">
+              Staff access now uses the backend JWT login flow for both admin and manager accounts.
             </div>
           )}
 

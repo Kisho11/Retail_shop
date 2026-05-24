@@ -93,7 +93,14 @@ function App() {
                       <Route path="/catalogue" element={<Catalogue />} />
                       <Route path="/sponsor" element={<Sponsor />} />
                       <Route path="/categories" element={<CategoriesPage />} />
-                      <Route path="/customer-portal" element={<CustomerPortal />} />
+                      <Route
+                        path="/customer-portal"
+                        element={
+                          <ProtectedRoute requiredRole="user">
+                            <CustomerPortal />
+                          </ProtectedRoute>
+                        }
+                      />
                       <Route path="*" element={<Navigate to="/" replace />} />
                     </Route>
                   </Routes>

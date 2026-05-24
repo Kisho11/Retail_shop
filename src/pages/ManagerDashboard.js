@@ -208,7 +208,7 @@ function ManagerDashboard() {
                     <tr key={order.id} className="border-b border-gray-200 hover:bg-gray-50">
                       <td className="px-6 py-4 font-bold text-blue-700">#{order.id}</td>
                       <td className="px-6 py-4">{order.customer}</td>
-                      <td className="px-6 py-4 font-semibold">${order.amount.toFixed(2)}</td>
+                      <td className="px-6 py-4 font-semibold">£{order.amount.toFixed(2)}</td>
                       <td className="px-6 py-4">
                         <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
                           order.status === 'Delivered' ? 'bg-green-100 text-green-800' :

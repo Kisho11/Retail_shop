@@ -39,7 +39,7 @@ function Navbar() {
       { to: '/catalogue', label: t('nav.catalogue') },
     ];
 
-    if (isAuthenticated && user?.role === 'customer') {
+    if (isAuthenticated && (user?.role === 'customer' || user?.role === 'user')) {
       return [...base, { to: '/categories', label: t('categories.categories') }];
     }
 
@@ -162,23 +162,25 @@ function Navbar() {
 
           <div className="hidden w-[360px] items-center justify-end gap-3 xl:flex">
             {!isAuthenticated ? (
-              <>
-                <Link
-                  to="/login?mode=customer-signin"
-                  className={`${desktopActionClass} border border-slate-500 text-slate-100 hover:border-red-300 hover:text-primary`}
-                >
-                  {t('nav.signIn')}
-                </Link>
-                <Link
-                  to="/signup"
-                  className={`${desktopActionClass} bg-primary text-white hover:bg-red-700`}
-                >
-                  {t('nav.signUp')}
-                </Link>
-              </>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <Link
+                    to="/login?mode=customer-signin"
+                    className={`${desktopActionClass} border border-slate-500 text-slate-100 hover:border-red-300 hover:text-primary`}
+                  >
+                    {t('nav.signIn')}
+                  </Link>
+                  <Link
+                    to="/signup"
+                    className={`${desktopActionClass} bg-primary text-white hover:bg-red-700`}
+                  >
+                    {t('nav.signUp')}
+                  </Link>
+                </div>
+              </div>
             ) : (
               <>
-                {user?.role === 'customer' ? (
+                {user?.role === 'customer' || user?.role === 'user' ? (
                   <Link
                     to="/customer-portal"
                     className={`${desktopActionClass} bg-primary text-white hover:bg-red-700`}
@@ -321,25 +323,27 @@ function Navbar() {
             </div>
 
             {!isAuthenticated ? (
-              <div className="grid grid-cols-2 gap-3 pt-2">
-                <Link
-                  to="/login?mode=customer-signin"
-                  className="rounded-lg border border-slate-300 px-3 py-2 text-center text-sm font-semibold text-slate-700"
-                  onClick={handleNavigate}
-                >
-                  {t('nav.signIn')}
-                </Link>
-                <Link
-                  to="/signup"
-                  className="rounded-lg bg-primary px-3 py-2 text-center text-sm font-semibold text-white"
-                  onClick={handleNavigate}
-                >
-                  {t('nav.signUp')}
-                </Link>
+              <div className="space-y-3 pt-2">
+                <div className="grid grid-cols-2 gap-3">
+                  <Link
+                    to="/login?mode=customer-signin"
+                    className="rounded-lg border border-slate-300 px-3 py-2 text-center text-sm font-semibold text-slate-700"
+                    onClick={handleNavigate}
+                  >
+                    {t('nav.signIn')}
+                  </Link>
+                  <Link
+                    to="/signup"
+                    className="rounded-lg bg-primary px-3 py-2 text-center text-sm font-semibold text-white"
+                    onClick={handleNavigate}
+                  >
+                    {t('nav.signUp')}
+                  </Link>
+                </div>
               </div>
             ) : (
               <div className="space-y-3 pt-2">
-                {user?.role === 'customer' ? (
+                {user?.role === 'customer' || user?.role === 'user' ? (
                   <Link
                     to="/customer-portal"
                     className="block rounded-lg bg-primary px-3 py-2 text-center text-sm font-semibold text-white"

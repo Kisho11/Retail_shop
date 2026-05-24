@@ -1,15 +1,18 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import UiIcon from '../components/UiIcon';
 
 function ManagerManagement() {
-  const { managers, addManager, updateManager, deleteManager } = useAuth();
+  const { managers, loadManagers, addManager, updateManager, deleteManager } = useAuth();
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     name: '',
     phone: '',
+    password: '',
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -19,10 +22,35 @@ function ManagerManagement() {
       email: '',
       name: '',
       phone: '',
+      password: '',
     });
     setEditingId(null);
     setError('');
   };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchManagers = async () => {
+      setLoading(true);
+      try {
+        await loadManagers();
+      } catch (loadError) {
+        if (!cancelled) {
+          setError(loadError.message || 'Unable to load managers');
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchManagers();
+    return () => {
+      cancelled = true;
+    };
+  }, [loadManagers]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -34,7 +62,7 @@ function ManagerManagement() {
     return re.test(email);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
@@ -55,16 +83,28 @@ function ManagerManagement() {
       return;
     }
 
-    if (editingId) {
-      updateManager(editingId, formData);
-      setSuccess('Manager updated successfully!');
-    } else {
-      addManager(formData);
-      setSuccess('Manager added successfully!');
-    }
+    setSaving(true);
 
-    resetForm();
-    setShowAddForm(false);
+    try {
+      if (editingId) {
+        await updateManager(editingId, formData);
+        setSuccess('Manager updated successfully!');
+      } else {
+        const createdManager = await addManager(formData);
+        setSuccess(
+          createdManager.temporaryPassword
+            ? `Manager added successfully. Temporary password: ${createdManager.temporaryPassword}`
+            : 'Manager added successfully!'
+        );
+      }
+
+      resetForm();
+      setShowAddForm(false);
+    } catch (submitError) {
+      setError(submitError.message || 'Unable to save manager');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleEdit = (manager) => {
@@ -72,16 +112,21 @@ function ManagerManagement() {
       email: manager.email,
       name: manager.name,
       phone: manager.phone,
+      password: '',
     });
     setEditingId(manager.id);
     setShowAddForm(true);
     window.scrollTo(0, 0);
   };
 
-  const handleDelete = (managerId) => {
+  const handleDelete = async (managerId) => {
     if (window.confirm('Are you sure you want to delete this manager? This action cannot be undone.')) {
-      deleteManager(managerId);
-      setSuccess('Manager deleted successfully!');
+      try {
+        await deleteManager(managerId);
+        setSuccess('Manager deleted successfully!');
+      } catch (deleteError) {
+        setError(deleteError.message || 'Unable to delete manager');
+      }
     }
   };
 
@@ -171,6 +216,20 @@ function ManagerManagement() {
               />
             </div>
 
+            {!editingId && (
+              <div>
+                <label className="block text-gray-700 font-semibold mb-2">Temporary Password</label>
+                <input
+                  type="text"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  placeholder="Leave blank to auto-generate"
+                  className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:border-primary focus:outline-none"
+                />
+              </div>
+            )}
+
             <div className="bg-blue-50 border-l-4 border-primary p-4 rounded">
               <p className="text-sm text-gray-700">
                 <strong>Note:</strong> New managers will need to use their email as username at login.
@@ -182,11 +241,12 @@ function ManagerManagement() {
             <div className="flex gap-4 pt-4 border-t-2 border-gray-200">
               <button
                 type="submit"
+                disabled={saving}
                 className="flex-1 bg-primary text-white py-3 rounded-lg font-bold hover:bg-red-800 transition"
               >
                 <span className="inline-flex items-center gap-2">
                   <UiIcon name={editingId ? 'save' : 'check'} className="h-4 w-4" />
-                  {editingId ? 'Update Manager' : 'Add Manager'}
+                  {saving ? 'Saving...' : editingId ? 'Update Manager' : 'Add Manager'}
                 </span>
               </button>
               <button
@@ -208,7 +268,11 @@ function ManagerManagement() {
       <div className="bg-white rounded-xl shadow-md p-6">
         <h4 className="text-xl font-bold text-gray-800 mb-6">All Managers ({managers.length})</h4>
         
-        {managers.length === 0 ? (
+        {loading ? (
+          <div className="text-center py-8">
+            <p className="text-gray-500 text-lg">Loading managers...</p>
+          </div>
+        ) : managers.length === 0 ? (
           <div className="text-center py-8">
             <p className="text-gray-500 text-lg">No managers yet. Add your first manager to get started!</p>
           </div>
@@ -278,8 +342,8 @@ function ManagerManagement() {
           Manager Access Information
         </h4>
         <div className="space-y-2 text-sm text-amber-900">
-          <p><strong>Existing Test Manager:</strong> manager@elamshelf.com / manager123</p>
-          <p><strong>For New Managers:</strong> Email address becomes their login username. They should reset their password on first login.</p>
+          <p><strong>Login:</strong> Managers authenticate through the same JWT-based staff login as admins.</p>
+          <p><strong>For New Managers:</strong> Email address becomes their login username. Use a temporary password or leave it blank to auto-generate one.</p>
         </div>
       </div>
     </div>
