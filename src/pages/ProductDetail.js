@@ -3,7 +3,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useProducts } from '../context/ProductContext';
 import UiIcon from '../components/UiIcon';
-import BackButton from '../components/BackButton';
 import ProductContentRenderer from '../components/ProductContentRenderer';
 import Seo from '../components/Seo';
 import { getProductPriceDisplay, PRODUCT_TYPES, resolveProductType } from '../utils/productType';
@@ -160,9 +159,6 @@ function ProductDetail() {
         structuredData={productSchema}
       />
       <div className="pt-6">
-        <div className="shell px-2 sm:px-4">
-          <BackButton className="mb-4" />
-        </div>
         <nav aria-label="Breadcrumb" className="shell">
           <ol className="mx-auto flex max-w-7xl items-center space-x-2 px-2 sm:px-4">
             {breadcrumbs.map((crumb, idx) => (

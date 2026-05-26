@@ -3,7 +3,6 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import Seo from '../components/Seo';
 import { useLanguage } from '../context/LanguageContext';
-import BackButton from '../components/BackButton';
 import { useProducts } from '../context/ProductContext';
 
 function ProductsByIndustry() {
@@ -62,9 +61,6 @@ function ProductsByIndustry() {
     <section className="shell py-10">
       <Seo title={seoTitle} description={seoDescription} />
       <div className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
-        {hasSearchOrIndustryFilter && (
-          <BackButton className="mb-4" />
-        )}
         <p className="text-xs font-bold uppercase tracking-[0.14em] text-blue-700">{t('productsPage.industryCatalog')}</p>
         <h1 className="mt-2 text-3xl font-bold text-slate-900 sm:text-4xl">{t('productsPage.title')}</h1>
         {formattedIndustry && (
