@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import UiIcon from '../components/UiIcon';
@@ -6,21 +6,12 @@ import Seo from '../components/Seo';
 
 const MIN_PASSWORD_LENGTH = 8;
 
-function generateCaptcha() {
-  const a = Math.floor(Math.random() * 9) + 1;
-  const b = Math.floor(Math.random() * 9) + 1;
-  const operator = Math.random() > 0.5 ? '+' : '-';
-  const result = operator === '+' ? a + b : a - b;
-  return {
-    question: `${a} ${operator} ${b}`,
-    answer: result,
-  };
-}
-
 function Login() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const googleBtnRef = useRef(null);
+  const recaptchaRef = useRef(null);
+  const recaptchaWidgetIdRef = useRef(null);
 
   const { login, signUpCustomer, signInCustomer, requestPasswordReset, resetPassword, authWithGoogle } = useAuth();
 
@@ -35,18 +26,15 @@ function Login() {
   const [newResetPassword, setNewResetPassword] = useState('');
   const [resetConfirmPassword, setResetConfirmPassword] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
-
-  const [captcha, setCaptcha] = useState(generateCaptcha());
-  const [captchaInput, setCaptchaInput] = useState('');
+  const [recaptchaToken, setRecaptchaToken] = useState('');
 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleError, setGoogleError] = useState('');
 
   const googleClientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
+  const recaptchaSiteKey = process.env.REACT_APP_RECAPTCHA_SITE_KEY;
   const isCustomerMode = mode === 'customer-signin' || mode === 'customer-signup';
-
-  const captchaValid = useMemo(() => Number(captchaInput) === captcha.answer, [captchaInput, captcha.answer]);
 
   useEffect(() => {
     const requestedMode = searchParams.get('mode');
@@ -57,18 +45,63 @@ function Login() {
     }
   }, [searchParams]);
 
-  const resetCaptcha = () => {
-    setCaptcha(generateCaptcha());
-    setCaptchaInput('');
+  const resetRecaptcha = () => {
+    setRecaptchaToken('');
+    if (window.grecaptcha && recaptchaWidgetIdRef.current !== null) {
+      window.grecaptcha.reset(recaptchaWidgetIdRef.current);
+    }
   };
 
   useEffect(() => {
-    resetCaptcha();
     setError('');
     setGoogleError('');
     setSuccessMessage('');
     setShowForgotPassword(false);
+    resetRecaptcha();
   }, [mode]);
+
+  useEffect(() => {
+    if (!recaptchaSiteKey) return;
+
+    const scriptId = 'google-recaptcha-script';
+
+    const renderRecaptcha = () => {
+      if (!window.grecaptcha || !recaptchaRef.current || recaptchaWidgetIdRef.current !== null) return;
+
+      recaptchaWidgetIdRef.current = window.grecaptcha.render(recaptchaRef.current, {
+        sitekey: recaptchaSiteKey,
+        callback: (token) => setRecaptchaToken(token),
+        'expired-callback': () => setRecaptchaToken(''),
+        'error-callback': () => {
+          setRecaptchaToken('');
+          setError('reCAPTCHA failed to load. Please refresh and try again.');
+        },
+      });
+    };
+
+    if (window.grecaptcha) {
+      renderRecaptcha();
+      return undefined;
+    }
+
+    const existing = document.getElementById(scriptId);
+    if (existing) {
+      existing.addEventListener('load', renderRecaptcha);
+      return () => existing.removeEventListener('load', renderRecaptcha);
+    }
+
+    const script = document.createElement('script');
+    script.id = scriptId;
+    script.src = 'https://www.google.com/recaptcha/api.js?render=explicit';
+    script.async = true;
+    script.defer = true;
+    script.onload = renderRecaptcha;
+    document.body.appendChild(script);
+
+    return () => {
+      script.onload = null;
+    };
+  }, [recaptchaSiteKey]);
 
   useEffect(() => {
     if (!isCustomerMode || !googleClientId) return;
@@ -138,9 +171,13 @@ function Login() {
   }, []);
 
   const ensureCaptcha = () => {
-    if (!captchaValid) {
-      setError('Captcha verification failed. Please try again.');
-      resetCaptcha();
+    if (!recaptchaSiteKey) {
+      setError('reCAPTCHA is not configured for this environment.');
+      return false;
+    }
+
+    if (!recaptchaToken) {
+      setError('Please complete the reCAPTCHA challenge.');
       return false;
     }
     return true;
@@ -154,13 +191,14 @@ function Login() {
 
     setLoading(true);
     try {
-      const result = await login(email, password);
+      const result = await login(email, password, recaptchaToken);
       if (result.success) {
         navigate(result.user.role === 'admin' ? '/admin/dashboard' : result.user.role === 'manager' ? '/manager/dashboard' : '/customer-portal');
       } else {
         setError(result.error);
       }
     } finally {
+      resetRecaptcha();
       setLoading(false);
     }
   };
@@ -173,7 +211,7 @@ function Login() {
 
     setLoading(true);
     try {
-      const result = await signInCustomer(email, password);
+      const result = await signInCustomer(email, password, recaptchaToken);
       if (result.success) {
         navigate(
           result.user.role === 'admin'
@@ -186,6 +224,7 @@ function Login() {
         setError(result.error);
       }
     } finally {
+      resetRecaptcha();
       setLoading(false);
     }
   };
@@ -209,13 +248,14 @@ function Login() {
 
     setLoading(true);
     try {
-      const result = await signUpCustomer({ name, email, password });
+      const result = await signUpCustomer({ name, email, password, recaptchaToken });
       if (result.success) {
         navigate('/customer-portal');
       } else {
         setError(result.error);
       }
     } finally {
+      resetRecaptcha();
       setLoading(false);
     }
   };
@@ -231,10 +271,11 @@ function Login() {
     }
 
     if (!resetToken.trim()) {
-      const result = await requestPasswordReset(resetEmail);
+      const result = await requestPasswordReset(resetEmail, recaptchaToken);
 
       if (!result.success) {
         setError(result.error);
+        resetRecaptcha();
         return;
       }
 
@@ -244,6 +285,7 @@ function Login() {
           ? 'Reset token generated. Paste or confirm the token below and choose a new password.'
           : result.message || 'If the account exists, a reset token has been prepared.'
       );
+      resetRecaptcha();
       return;
     }
 
@@ -257,10 +299,11 @@ function Login() {
       return;
     }
 
-    const result = await resetPassword(resetToken, newResetPassword);
+    const result = await resetPassword(resetToken, newResetPassword, recaptchaToken);
 
     if (!result.success) {
       setError(result.error);
+      resetRecaptcha();
       return;
     }
 
@@ -271,6 +314,7 @@ function Login() {
     setResetConfirmPassword('');
     setShowForgotPassword(false);
     setSuccessMessage(result.message || 'Password updated. You can now sign in with your new password.');
+    resetRecaptcha();
   };
 
   const currentSubmitHandler =
@@ -309,17 +353,6 @@ function Login() {
                   Customer Sign Up
                 </button>
               </div>
-              {mode === 'customer-signin' && (
-                <div className="mb-4 text-sm text-slate-600">
-                  <span className="font-semibold">Staff login:</span>{' '}
-                  <Link
-                    to="/login?mode=staff-signin"
-                    className="font-semibold text-blue-700 underline hover:text-blue-900"
-                  >
-                    Admin / Manager access
-                  </Link>
-                </div>
-              )}
             </>
           ) : null}
 
@@ -464,19 +497,20 @@ function Login() {
 
             <div className="rounded-lg border border-slate-300 bg-slate-50 p-2.5 sm:p-3">
               <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-semibold text-slate-700">Captcha: Solve {captcha.question}</p>
-                <button type="button" onClick={resetCaptcha} className="text-xs font-semibold text-blue-700 hover:underline">
-                  Refresh
+                <p className="text-sm font-semibold text-slate-700">Security Check</p>
+                <button type="button" onClick={resetRecaptcha} className="text-xs font-semibold text-blue-700 hover:underline">
+                  Reset
                 </button>
               </div>
-              <input
-                type="number"
-                value={captchaInput}
-                onChange={(e) => setCaptchaInput(e.target.value)}
-                className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
-                placeholder="Enter answer"
-                required
-              />
+              {recaptchaSiteKey ? (
+                <div className="mt-3 flex justify-center">
+                  <div ref={recaptchaRef} />
+                </div>
+              ) : (
+                <p className="mt-2 text-sm text-slate-500">
+                  reCAPTCHA requires `REACT_APP_RECAPTCHA_SITE_KEY` in your environment.
+                </p>
+              )}
             </div>
 
             <button

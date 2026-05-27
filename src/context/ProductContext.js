@@ -225,7 +225,6 @@ const mapProductFromApi = (product = {}) => {
   const parentCategories = categories.filter((category) => category.parent_id == null);
   const childCategories = categories.filter((category) => category.parent_id != null);
   const images = Array.isArray(product.images) ? [...product.images].sort((a, b) => a.sort_order - b.sort_order) : [];
-  const videos = Array.isArray(product.videos) ? [...product.videos].sort((a, b) => a.sort_order - b.sort_order) : [];
   const primaryImage = images.find((image) => image.is_primary) || images[0] || null;
   const galleryImages = images
     .filter((image) => !primaryImage || image.id !== primaryImage.id)
@@ -246,9 +245,6 @@ const mapProductFromApi = (product = {}) => {
     image: resolveMediaUrl(primaryImage?.image_url || ''),
     galleryImages,
     imageCount: images.length,
-    video: resolveMediaUrl(videos[0]?.video_url || ''),
-    galleryVideos: videos.slice(1).map((video) => resolveMediaUrl(video.video_url)),
-    videoCount: videos.length,
     variantPricing,
     minPrice,
     maxPrice,
@@ -259,14 +255,12 @@ const mapProductFromApi = (product = {}) => {
       onHand: Number(product.stock_quantity || 0),
     },
     _apiImages: images,
-    _apiVideos: videos,
   };
 };
 
 const mergeProductMediaIntoApiShape = (product = {}, media = {}) => ({
   ...product,
   images: Array.isArray(media.images) ? media.images : product.images || [],
-  videos: Array.isArray(media.videos) ? media.videos : product.videos || [],
 });
 
 const buildOptimisticMediaShape = (media = {}) => ({
@@ -276,13 +270,6 @@ const buildOptimisticMediaShape = (media = {}) => ({
       id: `temp-image-${index}`,
       image_url: imageUrl,
       is_primary: index === 0,
-      sort_order: index,
-    })),
-  videos: [media.video, ...(media.galleryVideos || [])]
-    .filter(Boolean)
-    .map((videoUrl, index) => ({
-      id: `temp-video-${index}`,
-      video_url: videoUrl,
       sort_order: index,
     })),
 });
@@ -522,11 +509,8 @@ export function ProductProvider({ children }) {
 
   const syncProductMedia = useCallback(async (productId, productName, media = {}, existingProduct = null) => {
     const imageUrls = [media.image, ...(media.galleryImages || [])].filter(Boolean);
-    const videoUrls = [media.video, ...(media.galleryVideos || [])].filter(Boolean);
     const existingImages = existingProduct?._apiImages || [];
-    const existingVideos = existingProduct?._apiVideos || [];
     let nextImages = existingImages;
-    let nextVideos = existingVideos;
 
     const sameImages =
       existingImages.length === imageUrls.length &&
@@ -535,10 +519,6 @@ export function ProductProvider({ children }) {
         .map((image) => resolveMediaUrl(image.image_url))]
         .filter(Boolean)
         .every((url, index) => url === imageUrls[index]);
-
-    const sameVideos =
-      existingVideos.length === videoUrls.length &&
-      existingVideos.map((video) => resolveMediaUrl(video.video_url)).every((url, index) => url === videoUrls[index]);
 
     if (!sameImages) {
       for (const image of existingImages) {
@@ -564,33 +544,8 @@ export function ProductProvider({ children }) {
       }
     }
 
-    if (!sameVideos) {
-      for (const video of existingVideos) {
-        const deleteResponse = await performRequest(`${API_BASE_URL}/products/${productId}/videos/${video.id}`, {
-          method: 'DELETE',
-          headers: createAuthHeaders(),
-        }, 'Failed to delete existing product video');
-        await handleProtectedApiResponse(deleteResponse, 'Failed to delete existing product video');
-      }
-
-      nextVideos = [];
-      for (const [index, videoUrl] of videoUrls.entries()) {
-        const file = await dataUrlToFile(videoUrl, `${productName || 'product'}-video-${index + 1}`);
-        const formData = new FormData();
-        formData.append('file', file);
-        const uploadResponse = await performRequest(`${API_BASE_URL}/products/${productId}/videos`, {
-          method: 'POST',
-          headers: createAuthHeaders(),
-          body: formData,
-        }, `Failed to upload product video ${index + 1}`);
-        await handleProtectedApiResponse(uploadResponse, 'Failed to upload product video');
-        nextVideos.push(await uploadResponse.json());
-      }
-    }
-
     return {
       images: nextImages,
-      videos: nextVideos,
     };
   }, []);
 
@@ -616,7 +571,6 @@ export function ProductProvider({ children }) {
       sale_price: productWithId.salePrice === '' ? null : (productWithId.salePrice != null ? Number(productWithId.salePrice) : null),
       stock_quantity: Number(productWithId.inventory?.onHand || 0),
       sku: sanitizeInventorySku(productWithId.inventory?.sku),
-      product_type: productWithId.productType || 'simple',
       industries: productWithId.industries || [],
       category_ids: getCategoryIdsByNames(productWithId.categories || [], productWithId.subcategories || []),
       variant_groups: buildVariantGroupsPayload(productWithId.price, productWithId.variantPricing),
@@ -683,7 +637,6 @@ export function ProductProvider({ children }) {
       sale_price: merged.salePrice === '' ? null : (merged.salePrice != null ? Number(merged.salePrice) : null),
       stock_quantity: Number(merged.inventory?.onHand || 0),
       sku: sanitizeInventorySku(merged.inventory?.sku),
-      product_type: merged.productType || 'simple',
       industries: merged.industries || [],
       category_ids: getCategoryIdsByNames(merged.categories || [], merged.subcategories || []),
       variant_groups: buildVariantGroupsPayload(merged.price, merged.variantPricing),

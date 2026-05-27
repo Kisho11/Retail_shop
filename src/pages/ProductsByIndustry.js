@@ -61,16 +61,19 @@ function ProductsByIndustry() {
     <section className="shell py-10">
       <Seo title={seoTitle} description={seoDescription} />
       <div className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
-        <p className="text-xs font-bold uppercase tracking-[0.14em] text-blue-700">{t('productsPage.industryCatalog')}</p>
-        <h1 className="mt-2 text-3xl font-bold text-slate-900 sm:text-4xl">{t('productsPage.title')}</h1>
-        {formattedIndustry && (
+        {query ? (
+          <p className="text-lg font-bold text-slate-900 sm:text-2xl">
+            {t('productsPage.searchResults', undefined, { query })}
+          </p>
+        ) : (
+          <>
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-blue-700">{t('productsPage.industryCatalog')}</p>
+            <h1 className="mt-2 text-3xl font-bold text-slate-900 sm:text-4xl">{t('productsPage.title')}</h1>
+          </>
+        )}
+        {formattedIndustry && !query && (
           <p className="mt-3 text-slate-600">
             {t('productsPage.showingFor', undefined, { industry: formattedIndustry })}
-          </p>
-        )}
-        {query && (
-          <p className="mt-2 text-slate-600">
-            {t('productsPage.searchResults', undefined, { query })}
           </p>
         )}
         {!formattedIndustry && !query && (

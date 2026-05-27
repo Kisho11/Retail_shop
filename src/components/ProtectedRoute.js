@@ -10,11 +10,19 @@ const roleMatches = (userRole, requiredRole) => {
   return normalizedUserRole === normalizedRequiredRole;
 };
 
+const getLoginRedirect = (requiredRole) => {
+  if (requiredRole === 'admin' || requiredRole === 'manager') {
+    return '/login?mode=staff-signin';
+  }
+
+  return '/login?mode=customer-signin';
+};
+
 function ProtectedRoute({ children, requiredRole }) {
   const { isAuthenticated, user } = useAuth();
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to={getLoginRedirect(requiredRole)} replace />;
   }
 
   if (!roleMatches(user?.role, requiredRole)) {

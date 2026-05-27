@@ -201,7 +201,7 @@ export function AuthProvider({ children }) {
     return response;
   }, [refreshSession]);
 
-  const login = useCallback(async (email, password) => {
+  const login = useCallback(async (email, password, recaptchaToken = '') => {
     if (!API_BASE_URL) {
       return { success: false, error: 'Backend authentication is not configured.' };
     }
@@ -210,6 +210,7 @@ export function AuthProvider({ children }) {
       const formData = new URLSearchParams();
       formData.append('username', email.trim().toLowerCase());
       formData.append('password', password);
+      formData.append('recaptcha_token', recaptchaToken);
 
       const loginResponse = await fetchWithTimeout(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
@@ -271,7 +272,9 @@ export function AuthProvider({ children }) {
   }, [setSession]);
 
   useEffect(() => {
-    if (!API_BASE_URL || !user) {
+    const isFrontendOnlyGoogleSession = user?.provider === 'google';
+
+    if (!API_BASE_URL || !user || isFrontendOnlyGoogleSession) {
       return undefined;
     }
 
@@ -316,7 +319,7 @@ export function AuthProvider({ children }) {
     };
   }, [logout, setSession, user]);
 
-  const signUpCustomer = useCallback(async ({ name, email, password }) => {
+  const signUpCustomer = useCallback(async ({ name, email, password, recaptchaToken }) => {
     const normalizedEmail = email.trim().toLowerCase();
 
     if (API_BASE_URL) {
@@ -331,6 +334,7 @@ export function AuthProvider({ children }) {
             email: normalizedEmail,
             phone: null,
             password,
+            recaptcha_token: recaptchaToken,
           }),
         });
 
@@ -342,7 +346,7 @@ export function AuthProvider({ children }) {
           };
         }
 
-        return await login(normalizedEmail, password);
+        return await login(normalizedEmail, password, recaptchaToken);
       } catch (error) {
         return {
           success: false,
@@ -379,9 +383,9 @@ export function AuthProvider({ children }) {
     return { success: true, user: customerSession };
   }, [customerUsers, login, setSession]);
 
-  const signInCustomer = useCallback(async (email, password) => {
+  const signInCustomer = useCallback(async (email, password, recaptchaToken = '') => {
     if (API_BASE_URL) {
-      const result = await login(email, password);
+      const result = await login(email, password, recaptchaToken);
       if (!result.success) {
         return result;
       }
@@ -410,7 +414,7 @@ export function AuthProvider({ children }) {
     return { success: true, user: customerSession };
   }, [customerUsers, login, setSession]);
 
-  const requestPasswordReset = useCallback(async (email) => {
+  const requestPasswordReset = useCallback(async (email, recaptchaToken = '') => {
     const normalizedEmail = email.trim().toLowerCase();
 
     if (!API_BASE_URL) {
@@ -430,7 +434,7 @@ export function AuthProvider({ children }) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email: normalizedEmail }),
+        body: JSON.stringify({ email: normalizedEmail, recaptcha_token: recaptchaToken }),
       });
 
       const data = await response.json().catch(() => null);
@@ -454,7 +458,7 @@ export function AuthProvider({ children }) {
     }
   }, [customerUsers]);
 
-  const resetPassword = useCallback(async (resetToken, newPassword) => {
+  const resetPassword = useCallback(async (resetToken, newPassword, recaptchaToken = '') => {
     if (!API_BASE_URL) {
       return { success: false, error: 'Backend password reset is not configured.' };
     }
@@ -468,6 +472,7 @@ export function AuthProvider({ children }) {
         body: JSON.stringify({
           reset_token: resetToken.trim(),
           new_password: newPassword,
+          recaptcha_token: recaptchaToken,
         }),
       });
 

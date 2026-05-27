@@ -23,12 +23,15 @@ function Navbar() {
   const [isIndustryOpen, setIsIndustryOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobileIndustryOpen, setIsMobileIndustryOpen] = useState(false);
+  const [searchScope, setSearchScope] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const { getTotalItems } = useCart();
   const { isAuthenticated, user, logout } = useAuth();
   const { language, setLanguage, t } = useLanguage();
   const navigate = useNavigate();
   const industryMenuRef = useRef(null);
   const cartItemCount = getTotalItems();
+
   const desktopActionClass =
     'inline-flex h-10 items-center justify-center rounded-full px-4 text-sm font-semibold transition';
 
@@ -46,10 +49,43 @@ function Navbar() {
     return base;
   }, [isAuthenticated, t, user]);
 
+  const searchScopes = useMemo(
+    () => [
+      { value: 'all', label: 'All Products' },
+      ...industries.map((industry) => ({
+        value: industry.slug,
+        label: t(`nav.industry.${industry.key}`),
+      })),
+    ],
+    [t]
+  );
+
   const handleNavigate = () => {
     setIsMobileMenuOpen(false);
     setIsIndustryOpen(false);
     setIsMobileIndustryOpen(false);
+  };
+
+  const handleSearchSubmit = (event) => {
+    event.preventDefault();
+    const trimmedQuery = searchQuery.trim();
+
+    if (searchScope === 'all') {
+      if (trimmedQuery) {
+        navigate(`/products-by-industry?q=${encodeURIComponent(trimmedQuery)}`);
+      } else {
+        navigate('/products-by-industry');
+      }
+      handleNavigate();
+      return;
+    }
+
+    if (trimmedQuery) {
+      navigate(`/products-by-industry/${searchScope}?q=${encodeURIComponent(trimmedQuery)}`);
+    } else {
+      navigate(`/products-by-industry/${searchScope}`);
+    }
+    handleNavigate();
   };
 
   const handleLogout = () => {
@@ -79,23 +115,40 @@ function Navbar() {
   return (
     <header className="sticky top-0 z-50 border-b border-slate-800 bg-black">
       <div className="bg-red-600 text-white">
-        <div className="shell relative flex min-h-10 items-center justify-center py-2 text-xs font-semibold sm:text-sm">
-          <p className="mx-auto whitespace-nowrap text-center leading-tight">{t('nav.limitedOffer')}</p>
-          <div className="absolute right-0 flex items-center gap-2">
-            <div className="hidden items-center gap-3 sm:flex">
-              <Link to="/catalogue" className="underline-offset-2 hover:underline">
-                {t('nav.viewDeals')}
-              </Link>
-              <span className="hidden sm:inline text-red-100">|</span>
-              <Link to="/clients" className="underline-offset-2 hover:underline">
-                {t('nav.getQuote')}
-              </Link>
-            </div>
-            <div className="inline-flex rounded-full border border-white/35 bg-red-700/90 p-0.5 backdrop-blur">
+        <div className="shell relative bg-red-700/90 px-3 py-2 text-xs font-bold uppercase tracking-[0.08em] sm:text-sm">
+          <p className="blink-banner-text text-center">
+            <span>SAME DAY PICK UP</span>
+            <span className="px-2 text-black">|</span>
+            <span>DELIVERY WITHIN 1 - 2 WORKING DAYS</span>
+            <span className="px-2 text-black">|</span>
+            <span>GET A QUOTE</span>
+          </p>
+          <div className="absolute right-3 top-1/2 hidden -translate-y-1/2 rounded-full border border-white/35 bg-red-800/80 p-0.5 backdrop-blur sm:inline-flex">
+            <button
+              type="button"
+              onClick={() => setLanguage('en')}
+              className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.08em] transition sm:text-xs ${
+                language === 'en' ? 'bg-white text-red-700 shadow-sm' : 'text-white hover:bg-white/15'
+              }`}
+            >
+              EN
+            </button>
+            <button
+              type="button"
+              onClick={() => setLanguage('ta')}
+              className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.08em] transition sm:text-xs ${
+                language === 'ta' ? 'bg-white text-red-700 shadow-sm' : 'text-white hover:bg-white/15'
+              }`}
+            >
+              TA
+            </button>
+          </div>
+          <div className="mt-2 flex justify-center sm:hidden">
+            <div className="inline-flex rounded-full border border-white/35 bg-red-800/80 p-0.5 backdrop-blur">
               <button
                 type="button"
                 onClick={() => setLanguage('en')}
-                className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.08em] transition sm:text-xs ${
+                className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.08em] transition ${
                   language === 'en' ? 'bg-white text-red-700 shadow-sm' : 'text-white hover:bg-white/15'
                 }`}
               >
@@ -104,7 +157,7 @@ function Navbar() {
               <button
                 type="button"
                 onClick={() => setLanguage('ta')}
-                className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.08em] transition sm:text-xs ${
+                className={`rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.08em] transition ${
                   language === 'ta' ? 'bg-white text-red-700 shadow-sm' : 'text-white hover:bg-white/15'
                 }`}
               >
@@ -112,15 +165,6 @@ function Navbar() {
               </button>
             </div>
           </div>
-        </div>
-        <div className="bg-red-700/90 px-3 py-2 text-center text-xs font-bold uppercase tracking-[0.08em] sm:text-sm">
-          <p className="blink-banner-text">
-            <span>SAME DAY PICK UP</span>
-            <span className="px-2 text-black">|</span>
-            <span>DELIVERY WITHIN 1 - 2 WORKING DAYS</span>
-            <span className="px-2 text-black">|</span>
-            <span>GET A QUOTE</span>
-          </p>
         </div>
       </div>
       <div className="shell">
@@ -161,6 +205,7 @@ function Navbar() {
           </nav>
 
           <div className="hidden w-[360px] items-center justify-end gap-3 xl:flex">
+              {/* Removed search form */}
             {!isAuthenticated ? (
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2">
@@ -278,6 +323,119 @@ function Navbar() {
           </div>
         </div>
 
+        <div className="hidden items-center justify-center border-t border-slate-800 py-3 lg:flex">
+          <form
+            onSubmit={handleSearchSubmit}
+            className="flex w-full max-w-[980px] items-stretch overflow-hidden rounded-[22px] border border-slate-700/80 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.35)] ring-1 ring-slate-800/70"
+          >
+            <div className="flex w-full items-stretch overflow-hidden rounded-[16px] bg-white focus-within:ring-2 focus-within:ring-[#f3a847]">
+              <div className="relative w-[180px] shrink-0 border-r border-slate-200 bg-slate-100">
+                <label className="sr-only" htmlFor="header-search-scope">Search department</label>
+                <select
+                  id="header-search-scope"
+                  value={searchScope}
+                  onChange={(event) => setSearchScope(event.target.value)}
+                  className="h-[58px] w-full appearance-none bg-transparent px-4 pr-10 text-sm font-semibold text-slate-700 outline-none"
+                >
+                  {searchScopes.map((scope) => (
+                    <option key={scope.value} value={scope.value}>
+                      {scope.label}
+                    </option>
+                  ))}
+                </select>
+                <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-slate-500">
+                  <svg viewBox="0 0 20 20" className="h-4 w-4 fill-current" aria-hidden="true">
+                    <path d="M5.2 7.2a.75.75 0 0 1 1.06 0L10 10.94l3.74-3.74a.75.75 0 1 1 1.06 1.06l-4.27 4.27a.75.75 0 0 1-1.06 0L5.2 8.26a.75.75 0 0 1 0-1.06Z" />
+                  </svg>
+                </span>
+              </div>
+
+              <div className="relative min-w-0 flex-1">
+                <label className="sr-only" htmlFor="header-search-query">Search products</label>
+                <span className="pointer-events-none absolute inset-y-0 left-4 flex items-center text-slate-400">
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                    <circle cx="11" cy="11" r="7" />
+                    <path strokeLinecap="round" d="m20 20-3.5-3.5" />
+                  </svg>
+                </span>
+                <input
+                  id="header-search-query"
+                  type="search"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Search shelving, counters, gondolas, fittings..."
+                  className="h-[58px] min-w-0 w-full px-11 pr-5 text-[15px] text-slate-900 outline-none placeholder:text-slate-400"
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="inline-flex min-w-[92px] items-center justify-center gap-2 bg-[#f3a847] px-4 text-sm font-bold text-slate-950 transition hover:bg-[#ef8f2f]"
+                aria-label="Search products"
+              >
+                <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <circle cx="11" cy="11" r="7" />
+                  <path strokeLinecap="round" d="m20 20-3.5-3.5" />
+                </svg>
+                Go
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div className="border-t border-slate-800 py-3 lg:hidden">
+          <form
+            onSubmit={handleSearchSubmit}
+            className="overflow-hidden rounded-[20px] border border-slate-700/80 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 p-1.5 shadow-[0_10px_26px_rgba(0,0,0,0.28)]"
+          >
+            <div className="flex overflow-hidden rounded-[14px] bg-white focus-within:ring-2 focus-within:ring-[#f3a847]">
+              <div className="relative max-w-[138px] border-r border-slate-200 bg-slate-100">
+                <select
+                  value={searchScope}
+                  onChange={(event) => setSearchScope(event.target.value)}
+                  className="h-[54px] w-full appearance-none bg-transparent px-3 pr-8 text-xs font-semibold text-slate-700 outline-none"
+                >
+                  {searchScopes.map((scope) => (
+                    <option key={scope.value} value={scope.value}>
+                      {scope.label}
+                    </option>
+                  ))}
+                </select>
+                <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center text-slate-500">
+                  <svg viewBox="0 0 20 20" className="h-3.5 w-3.5 fill-current" aria-hidden="true">
+                    <path d="M5.2 7.2a.75.75 0 0 1 1.06 0L10 10.94l3.74-3.74a.75.75 0 1 1 1.06 1.06l-4.27 4.27a.75.75 0 0 1-1.06 0L5.2 8.26a.75.75 0 0 1 0-1.06Z" />
+                  </svg>
+                </span>
+              </div>
+              <div className="relative min-w-0 flex-1">
+                <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                    <circle cx="11" cy="11" r="7" />
+                    <path strokeLinecap="round" d="m20 20-3.5-3.5" />
+                  </svg>
+                </span>
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Search products"
+                  className="h-[54px] min-w-0 w-full bg-white px-9 text-sm text-slate-900 outline-none placeholder:text-slate-400"
+                />
+              </div>
+              <button
+                type="submit"
+                className="inline-flex min-w-[56px] items-center justify-center bg-[#f3a847] px-4 text-slate-950"
+                aria-label="Search products"
+              >
+                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <circle cx="11" cy="11" r="7" />
+                  <path strokeLinecap="round" d="m20 20-3.5-3.5" />
+                </svg>
+              </button>
+            </div>
+          </form>
+        </div>
+
         {isMobileMenuOpen && (
           <div className="fade-up space-y-3 border-t border-slate-700 bg-black py-4 xl:hidden">
             {navLinks.map((link) => (
@@ -290,6 +448,8 @@ function Navbar() {
                 {link.label}
               </Link>
             ))}
+
+            {/* Removed mobile search form */}
 
             <div className="rounded-xl bg-slate-50 p-3">
               <button

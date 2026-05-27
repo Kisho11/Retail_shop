@@ -77,7 +77,7 @@ function ManagerDashboard() {
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate('/login?mode=staff-signin');
   };
 
   const getStockState = (product) => {

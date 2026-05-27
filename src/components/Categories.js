@@ -392,11 +392,11 @@ function Categories() {
             )}
 
             {selectedCategorySubcategories.length > 0 && showSubcategoryNav && (
-              <div>
+              <div className="min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white p-4">
                 <h3 className="mb-4 pb-1 pt-1 text-base font-bold uppercase tracking-[0.12em] text-slate-500">
                   Subcategories
                 </h3>
-                <div className="modern-thin-scrollbar grid max-h-[60vh] grid-cols-1 gap-2 overflow-y-auto pr-1 lg:max-h-[calc(100vh-11rem)]">
+                <div className="modern-thin-scrollbar grid max-h-[60vh] grid-cols-1 gap-2 overflow-y-auto lg:max-h-[calc(100vh-11rem)]">
                   {selectedCategorySubcategories.map((subCategory) => {
                     const isSubcategoryActive = selectedSubcategory === subCategory.name;
                     return (
@@ -404,14 +404,14 @@ function Categories() {
                         key={subCategory.name}
                         type="button"
                         onClick={() => handleSubcategorySelect(selectedCategory, subCategory.name)}
-                        className={`w-full rounded-xl p-2 text-left transition ${
+                        className={`box-border w-full rounded-xl p-2 text-left transition ${
                           isSubcategoryActive
                             ? 'bg-primary text-white'
                             : 'bg-white hover:bg-slate-50'
                         }`}
                       >
                         <div className="flex items-center gap-2 p-1">
-                          <div className="h-12 w-12 overflow-hidden rounded-lg bg-slate-100">
+                          <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-slate-100">
                             {subCategory.image ? (
                               <img src={subCategory.image} alt={subCategory.name} className="h-full w-full object-cover" />
                             ) : null}
