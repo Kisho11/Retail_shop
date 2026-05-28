@@ -1,35 +1,98 @@
-import React from 'react';
-import { useParams } from 'react-router-dom';
-import products from '../data/products';  // Import shared data
+import React, { useMemo } from 'react';
+import { useParams, useSearchParams } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
+import Seo from '../components/Seo';
+import { useLanguage } from '../context/LanguageContext';
+import { useProducts } from '../context/ProductContext';
 
 function ProductsByIndustry() {
-  const { industry } = useParams();  // e.g., 'tech-shops'
-  const formattedIndustry = industry ? industry.replace('-', ' ') : null;
+  const { industry } = useParams();
+  const [searchParams] = useSearchParams();
+  const { t } = useLanguage();
+  const { products } = useProducts();
+  const formattedIndustry = useMemo(
+    () => (industry ? decodeURIComponent(industry).replace(/-/g, ' ') : null),
+    [industry]
+  );
+  const query = searchParams.get('q')?.trim() || '';
+  const normalizedQuery = useMemo(() => query.toLowerCase(), [query]);
+  const hasSearchOrIndustryFilter = Boolean(query || formattedIndustry);
+  const seoTitle = formattedIndustry
+    ? `${formattedIndustry} Shop Fittings`
+    : query
+      ? `Search results for "${query}"`
+      : 'Products by Industry';
+  const seoDescription = formattedIndustry
+    ? `Browse Elmshelf retail shelving, counters, refrigeration, and display fixtures for ${formattedIndustry} businesses.`
+    : query
+      ? `Explore Elmshelf search results for ${query} across retail shelving, displays, and store fixtures.`
+      : 'Browse retail shelving, displays, and store equipment by industry to find the right fit for your shop.';
 
-  // Filter products by industry
-  const filteredProducts = formattedIndustry
-    ? products.filter(p => p.industries.some(ind => ind.toLowerCase() === formattedIndustry.toLowerCase()))
-    : products;  // Show all if no specific industry
+  const filteredProducts = useMemo(
+    () =>
+      products.filter((product) => {
+        const matchesIndustry = formattedIndustry
+          ? product.industries?.some((ind) => ind.toLowerCase() === formattedIndustry.toLowerCase())
+          : true;
+
+        if (!matchesIndustry) {
+          return false;
+        }
+
+        if (!normalizedQuery) {
+          return true;
+        }
+
+        const searchableContent = [
+          product.name,
+          product.description,
+          ...(product.categories || []),
+          ...(product.industries || []),
+        ]
+          .join(' ')
+          .toLowerCase();
+
+        return searchableContent.includes(normalizedQuery);
+      }),
+    [formattedIndustry, normalizedQuery, products]
+  );
 
   return (
-    <div className="container mx-auto py-8">
-      <h1 className="text-4xl font-bold text-primary mb-4">Products by Industry</h1>
-      {formattedIndustry ? (
-        <p className="text-gray-700 mb-8">Showing products tailored for: {formattedIndustry}</p>
-      ) : (
-        <p className="text-gray-700 mb-8">Browse products by specific industries using the menu.</p>
-      )}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredProducts.length > 0 ? (
-          filteredProducts.map(product => (
-            <ProductCard key={product.id} product={product} />
-          ))
+    <section className="shell py-10">
+      <Seo title={seoTitle} description={seoDescription} />
+      <div className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
+        {query ? (
+          <p className="text-lg font-bold text-slate-900 sm:text-2xl">
+            {t('productsPage.searchResults', undefined, { query })}
+          </p>
         ) : (
-          <p className="text-gray-700">No products found for this industry.</p>
+          <>
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-blue-700">{t('productsPage.industryCatalog')}</p>
+            <h1 className="mt-2 text-3xl font-bold text-slate-900 sm:text-4xl">{t('productsPage.title')}</h1>
+          </>
+        )}
+        {formattedIndustry && !query && (
+          <p className="mt-3 text-slate-600">
+            {t('productsPage.showingFor', undefined, { industry: formattedIndustry })}
+          </p>
+        )}
+        {!formattedIndustry && !query && (
+          <p className="mt-3 text-slate-600">{t('productsPage.help')}</p>
         )}
       </div>
-    </div>
+
+      {filteredProducts.length > 0 ? (
+        <div className="grid grid-cols-4 gap-2 sm:gap-5 xl:grid-cols-3">
+          {filteredProducts.map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-600">
+          {t('productsPage.noProducts')}
+        </div>
+      )}
+    </section>
   );
 }
 
