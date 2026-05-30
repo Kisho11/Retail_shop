@@ -180,7 +180,7 @@ function Navbar() {
               </Link>
             ))}
 
-            <div className="relative" ref={industryMenuRef}>
+            <div className="relative z-20" ref={industryMenuRef}>
               <button
                 onClick={() => setIsIndustryOpen((prev) => !prev)}
                 className="text-[20px] font-bold text-slate-100 transition hover:text-primary"
@@ -188,7 +188,7 @@ function Navbar() {
                 {t('nav.industries')}
               </button>
               {isIndustryOpen && (
-                <div className="absolute right-0 mt-3 w-64 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
+                <div className="absolute right-0 z-30 mt-3 w-64 rounded-xl border border-slate-200 bg-white p-2 shadow-2xl">
                   {industries.map((industry) => (
                     <Link
                       key={industry.key}

@@ -92,11 +92,25 @@ const mapManager = (manager) => ({
   temporaryPassword: manager.temporary_password || '',
 });
 
+const mapCustomer = (customer) => ({
+  id: customer.id,
+  email: customer.email,
+  name: customer.full_name,
+  phone: customer.phone || '',
+  role: normalizeRole(customer.role),
+  isActive: customer.is_active,
+  createdAt: customer.created_at,
+  orderCount: Number(customer.order_count || 0),
+  totalSpent: Number(customer.total_spent || 0),
+  lastOrderDate: customer.last_order_date || null,
+});
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => readStorage(AUTH_SESSION_KEY, null));
   const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(readStorage(AUTH_SESSION_KEY, null)));
   const [customerUsers, setCustomerUsers] = useState(() => readStorage(CUSTOMER_USERS_KEY, []));
   const [managers, setManagers] = useState([]);
+  const [registeredCustomers, setRegisteredCustomers] = useState([]);
 
   useEffect(() => {
     if (user) {
@@ -121,6 +135,7 @@ export function AuthProvider({ children }) {
     setUser(null);
     setIsAuthenticated(false);
     setManagers([]);
+    setRegisteredCustomers([]);
     clearAuthStorage();
   }, []);
 
@@ -201,7 +216,7 @@ export function AuthProvider({ children }) {
     return response;
   }, [refreshSession]);
 
-  const login = useCallback(async (email, password, recaptchaToken = '') => {
+  const login = useCallback(async (email, password) => {
     if (!API_BASE_URL) {
       return { success: false, error: 'Backend authentication is not configured.' };
     }
@@ -210,7 +225,6 @@ export function AuthProvider({ children }) {
       const formData = new URLSearchParams();
       formData.append('username', email.trim().toLowerCase());
       formData.append('password', password);
-      formData.append('recaptcha_token', recaptchaToken);
 
       const loginResponse = await fetchWithTimeout(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
@@ -319,7 +333,7 @@ export function AuthProvider({ children }) {
     };
   }, [logout, setSession, user]);
 
-  const signUpCustomer = useCallback(async ({ name, email, password, recaptchaToken }) => {
+  const signUpCustomer = useCallback(async ({ name, email, password }) => {
     const normalizedEmail = email.trim().toLowerCase();
 
     if (API_BASE_URL) {
@@ -334,7 +348,6 @@ export function AuthProvider({ children }) {
             email: normalizedEmail,
             phone: null,
             password,
-            recaptcha_token: recaptchaToken,
           }),
         });
 
@@ -346,7 +359,7 @@ export function AuthProvider({ children }) {
           };
         }
 
-        return await login(normalizedEmail, password, recaptchaToken);
+        return await login(normalizedEmail, password);
       } catch (error) {
         return {
           success: false,
@@ -383,9 +396,9 @@ export function AuthProvider({ children }) {
     return { success: true, user: customerSession };
   }, [customerUsers, login, setSession]);
 
-  const signInCustomer = useCallback(async (email, password, recaptchaToken = '') => {
+  const signInCustomer = useCallback(async (email, password) => {
     if (API_BASE_URL) {
-      const result = await login(email, password, recaptchaToken);
+      const result = await login(email, password);
       if (!result.success) {
         return result;
       }
@@ -414,7 +427,7 @@ export function AuthProvider({ children }) {
     return { success: true, user: customerSession };
   }, [customerUsers, login, setSession]);
 
-  const requestPasswordReset = useCallback(async (email, recaptchaToken = '') => {
+  const requestPasswordReset = useCallback(async (email) => {
     const normalizedEmail = email.trim().toLowerCase();
 
     if (!API_BASE_URL) {
@@ -434,7 +447,7 @@ export function AuthProvider({ children }) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email: normalizedEmail, recaptcha_token: recaptchaToken }),
+        body: JSON.stringify({ email: normalizedEmail }),
       });
 
       const data = await response.json().catch(() => null);
@@ -458,7 +471,7 @@ export function AuthProvider({ children }) {
     }
   }, [customerUsers]);
 
-  const resetPassword = useCallback(async (resetToken, newPassword, recaptchaToken = '') => {
+  const resetPassword = useCallback(async (resetToken, newPassword) => {
     if (!API_BASE_URL) {
       return { success: false, error: 'Backend password reset is not configured.' };
     }
@@ -472,7 +485,6 @@ export function AuthProvider({ children }) {
         body: JSON.stringify({
           reset_token: resetToken.trim(),
           new_password: newPassword,
-          recaptcha_token: recaptchaToken,
         }),
       });
 
@@ -508,16 +520,33 @@ export function AuthProvider({ children }) {
     return mappedManagers;
   }, [authFetch]);
 
+  const loadCustomers = useCallback(async () => {
+    if (!API_BASE_URL) {
+      return [];
+    }
+
+    const response = await authFetch('/admin/customers?per_page=100');
+    const data = await response.json().catch(() => null);
+    const rows = Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : [];
+    const mappedCustomers = rows.map(mapCustomer);
+    setRegisteredCustomers(mappedCustomers);
+    return mappedCustomers;
+  }, [authFetch]);
+
   useEffect(() => {
     if (user?.role === 'admin') {
       loadManagers().catch(() => {
         setManagers([]);
       });
+      loadCustomers().catch(() => {
+        setRegisteredCustomers([]);
+      });
       return;
     }
 
     setManagers([]);
-  }, [loadManagers, user]);
+    setRegisteredCustomers([]);
+  }, [loadCustomers, loadManagers, user]);
 
   const addManager = useCallback(async (managerData) => {
     const response = await authFetch('/admin/managers', {
@@ -647,7 +676,9 @@ export function AuthProvider({ children }) {
       isCustomer,
       isAdminOrManager,
       managers,
+      registeredCustomers,
       loadManagers,
+      loadCustomers,
       addManager,
       updateManager,
       deleteManager,
@@ -669,7 +700,9 @@ export function AuthProvider({ children }) {
       isCustomer,
       isAdminOrManager,
       managers,
+      registeredCustomers,
       loadManagers,
+      loadCustomers,
       addManager,
       updateManager,
       deleteManager,
