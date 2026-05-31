@@ -59,8 +59,8 @@ function Login() {
 
       window.google.accounts.id.initialize({
         client_id: googleClientId,
-        callback: (response) => {
-          const result = authWithGoogle(response.credential, mode === 'customer-signup' ? 'signup' : 'signin');
+        callback: async (response) => {
+          const result = await authWithGoogle(response.credential);
           if (result.success) {
             navigate('/customer-portal');
           } else {

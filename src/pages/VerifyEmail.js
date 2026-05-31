@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import Seo from '../components/Seo';
+import { useAuth } from '../context/AuthContext';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL;
 
@@ -8,6 +9,7 @@ function VerifyEmail() {
   const [searchParams] = useSearchParams();
   const [statusState, setStatusState] = useState('loading');
   const [message, setMessage] = useState('');
+  const { user, markEmailVerified } = useAuth();
 
   useEffect(() => {
     const token = searchParams.get('token');
@@ -22,8 +24,10 @@ function VerifyEmail() {
       .then((data) => {
         if (data.already_verified) {
           setStatusState('already');
+          markEmailVerified();
         } else if (data.message && !data.detail) {
           setStatusState('success');
+          markEmailVerified();
         } else {
           setStatusState('error');
           setMessage(data.detail || 'Verification failed. The link may be expired or invalid.');
@@ -33,7 +37,10 @@ function VerifyEmail() {
         setStatusState('error');
         setMessage('Could not reach the server. Please try again.');
       });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
+
+  const isLoggedIn = Boolean(user);
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-white px-4">
@@ -54,12 +61,21 @@ function VerifyEmail() {
             <p className="text-slate-600 mb-6">
               Your email address has been verified. You can now place orders.
             </p>
-            <Link
-              to="/customer-portal"
-              className="inline-block rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition"
-            >
-              Go to My Account
-            </Link>
+            {isLoggedIn ? (
+              <Link
+                to="/customer-portal"
+                className="inline-block rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition"
+              >
+                Go to My Account
+              </Link>
+            ) : (
+              <Link
+                to="/login"
+                className="inline-block rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition"
+              >
+                Sign In
+              </Link>
+            )}
           </>
         )}
 
@@ -73,10 +89,10 @@ function VerifyEmail() {
             <h1 className="text-2xl font-bold text-slate-900 mb-2">Already Verified</h1>
             <p className="text-slate-600 mb-6">Your email address was already verified.</p>
             <Link
-              to="/"
+              to={isLoggedIn ? '/customer-portal' : '/'}
               className="inline-block rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 transition"
             >
-              Back to Store
+              {isLoggedIn ? 'Go to My Account' : 'Back to Store'}
             </Link>
           </>
         )}

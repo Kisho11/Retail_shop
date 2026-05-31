@@ -72,16 +72,6 @@ const fetchWithTimeout = async (url, options = {}, timeoutMs = REQUEST_TIMEOUT_M
   }
 };
 
-const decodeGoogleCredential = (credential) => {
-  try {
-    const [, payload] = credential.split('.');
-    const base64 = payload.replace(/-/g, '+').replace(/_/g, '/');
-    return JSON.parse(window.atob(base64));
-  } catch (error) {
-    return null;
-  }
-};
-
 const mapManager = (manager) => ({
   id: manager.id,
   email: manager.email,
@@ -510,6 +500,10 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  const markEmailVerified = useCallback(() => {
+    setUser((prev) => (prev ? { ...prev, isEmailVerified: true } : prev));
+  }, []);
+
   const resendVerificationEmail = useCallback(async () => {
     try {
       const response = await authFetch('/auth/resend-verification', { method: 'POST' });
@@ -625,55 +619,60 @@ export function AuthProvider({ children }) {
 
   const getManagerById = useCallback((managerId) => managers.find((manager) => manager.id === managerId), [managers]);
 
-  const authWithGoogle = useCallback((credential, mode = 'signin') => {
-    const profile = decodeGoogleCredential(credential);
-
-    if (!profile?.email) {
-      return { success: false, error: 'Google authentication failed' };
+  const authWithGoogle = useCallback(async (credential) => {
+    if (!API_BASE_URL) {
+      return { success: false, error: 'Backend authentication is not configured.' };
     }
 
-    const email = profile.email.trim().toLowerCase();
-    const name = profile.name || 'Google User';
-    const existing = customerUsers.find((item) => item.email.toLowerCase() === email);
+    try {
+      const loginResponse = await fetchWithTimeout(`${API_BASE_URL}/auth/google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential }),
+      });
 
-    if (mode === 'signup' && existing && existing.provider !== 'google') {
-      return {
-        success: false,
-        error: 'Email already registered with password login. Use customer sign in.',
+      if (!loginResponse.ok) {
+        const errorData = await loginResponse.json().catch(() => null);
+        return { success: false, error: errorData?.detail || 'Google authentication failed' };
+      }
+
+      const tokens = await loginResponse.json();
+      let profile = tokens.user || null;
+
+      if (!profile) {
+        const profileResponse = await fetchWithTimeout(`${API_BASE_URL}/users/me`);
+        if (!profileResponse.ok) {
+          return { success: false, error: 'Signed in with Google, but failed to load your profile' };
+        }
+        profile = await profileResponse.json();
+      }
+
+      const sessionUser = {
+        id: profile.id,
+        email: profile.email,
+        name: profile.full_name,
+        phone: profile.phone || '',
+        role: normalizeRole(profile.role),
+        isActive: profile.is_active,
+        isEmailVerified: profile.is_email_verified ?? true,
+        loginTime: new Date().toISOString(),
       };
+
+      setSession(sessionUser);
+      return { success: true, user: sessionUser };
+    } catch (error) {
+      if (error?.name === 'AbortError') {
+        return { success: false, error: 'Request timed out. Please try again.' };
+      }
+      return { success: false, error: 'Unable to complete Google sign-in' };
     }
-
-    let account = existing;
-
-    if (!account) {
-      account = {
-        id: Date.now(),
-        name,
-        email,
-        password: null,
-        provider: 'google',
-        createdAt: new Date().toISOString(),
-      };
-      setCustomerUsers((prev) => [...prev, account]);
-    }
-
-    const customerSession = {
-      id: account.id,
-      name: account.name,
-      email: account.email,
-      role: 'user',
-      provider: 'google',
-      loginTime: new Date().toISOString(),
-    };
-
-    setSession(customerSession);
-    return { success: true, user: customerSession };
-  }, [customerUsers, setSession]);
+  }, [setSession]);
 
   const isAdmin = useCallback(() => user?.role === 'admin', [user]);
   const isManager = useCallback(() => user?.role === 'manager', [user]);
   const isCustomer = useCallback(() => normalizeRole(user?.role) === 'user', [user]);
   const isAdminOrManager = useCallback(() => user?.role === 'admin' || user?.role === 'manager', [user]);
+
 
   const value = useMemo(
     () => ({
@@ -685,6 +684,7 @@ export function AuthProvider({ children }) {
       requestPasswordReset,
       resetPassword,
       resendVerificationEmail,
+      markEmailVerified,
       authWithGoogle,
       logout,
       isAdmin,
@@ -710,6 +710,7 @@ export function AuthProvider({ children }) {
       requestPasswordReset,
       resetPassword,
       resendVerificationEmail,
+      markEmailVerified,
       authWithGoogle,
       logout,
       isAdmin,
