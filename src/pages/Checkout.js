@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useOrders } from '../context/OrderContext';
 import { useAuth } from '../context/AuthContext';
@@ -48,6 +48,28 @@ function Checkout() {
         >
           Back to Home
         </button>
+      </div>
+    );
+  }
+
+  if (user && !user.isEmailVerified) {
+    return (
+      <div className="container mx-auto px-4 py-16 text-center sm:px-8">
+        <Seo title="Checkout" description="Complete your Elmshelf checkout securely." noindex />
+        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100">
+          <svg className="h-8 w-8 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
+        </div>
+        <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-3">Verify Your Email</h1>
+        <p className="text-lg text-gray-600 mb-2">You need to verify your email address before placing an order.</p>
+        <p className="text-sm text-gray-500 mb-8">Check your inbox for the verification link, or go to your account to resend it.</p>
+        <Link
+          to="/customer-portal"
+          className="inline-block bg-primary text-white px-8 py-3 rounded-lg hover:bg-red-700 transition font-semibold"
+        >
+          Go to My Account
+        </Link>
       </div>
     );
   }

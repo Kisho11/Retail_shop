@@ -266,6 +266,7 @@ export function AuthProvider({ children }) {
         phone: profile.phone || '',
         role: normalizeRole(profile.role),
         isActive: profile.is_active,
+        isEmailVerified: profile.is_email_verified ?? false,
         loginTime: new Date().toISOString(),
       };
 
@@ -310,9 +311,10 @@ export function AuthProvider({ children }) {
             phone: profile.phone || '',
             role: normalizeRole(profile.role),
             isActive: profile.is_active,
+            isEmailVerified: profile.is_email_verified ?? false,
             loginTime: user.loginTime || new Date().toISOString(),
           };
-          const hasChanged = ['id', 'email', 'name', 'phone', 'role', 'isActive'].some(
+          const hasChanged = ['id', 'email', 'name', 'phone', 'role', 'isActive', 'isEmailVerified'].some(
             (key) => user?.[key] !== nextSession[key]
           );
           if (hasChanged) {
@@ -508,6 +510,19 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  const resendVerificationEmail = useCallback(async () => {
+    try {
+      const response = await authFetch('/auth/resend-verification', { method: 'POST' });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        return { success: false, error: data?.detail || 'Failed to send verification email' };
+      }
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: 'Unable to reach the server' };
+    }
+  }, [authFetch]);
+
   const loadManagers = useCallback(async () => {
     if (!API_BASE_URL) {
       return [];
@@ -669,6 +684,7 @@ export function AuthProvider({ children }) {
       signInCustomer,
       requestPasswordReset,
       resetPassword,
+      resendVerificationEmail,
       authWithGoogle,
       logout,
       isAdmin,
@@ -693,6 +709,7 @@ export function AuthProvider({ children }) {
       signInCustomer,
       requestPasswordReset,
       resetPassword,
+      resendVerificationEmail,
       authWithGoogle,
       logout,
       isAdmin,

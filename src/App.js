@@ -9,6 +9,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import CartToast from './components/CartToast';
+import EmailVerificationBanner from './components/EmailVerificationBanner';
 import CookieConsentBanner from './components/CookieConsentBanner';
 import AdvertPopup from './components/AdvertPopup';
 import QuickContactActions from './components/QuickContactActions';
@@ -26,6 +27,7 @@ const Reviews = lazy(() => import('./pages/Reviews'));
 const Catalogue = lazy(() => import('./pages/Catalogue'));
 const Sponsor = lazy(() => import('./pages/Sponsor'));
 const Login = lazy(() => import('./pages/Login'));
+const VerifyEmail = lazy(() => import('./pages/VerifyEmail'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const ManagerDashboard = lazy(() => import('./pages/ManagerDashboard'));
 const CustomerPortal = lazy(() => import('./pages/CustomerPortal'));
@@ -35,6 +37,7 @@ function CustomerLayout() {
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
+      <EmailVerificationBanner />
       <CartToast />
       <main className="flex-grow">
         <Outlet />
@@ -60,6 +63,7 @@ function App() {
                   <Routes>
                     <Route path="/login" element={<Login />} />
                     <Route path="/signup" element={<Login />} />
+                    <Route path="/verify-email" element={<VerifyEmail />} />
 
                     <Route
                       path="/admin/dashboard"
