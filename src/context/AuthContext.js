@@ -202,7 +202,7 @@ export function AuthProvider({ children }) {
     return response;
   }, [refreshSession]);
 
-  const login = useCallback(async (email, password) => {
+  const login = useCallback(async (email, password, recaptchaToken) => {
     if (!API_BASE_URL) {
       return { success: false, error: 'Backend authentication is not configured.' };
     }
@@ -211,6 +211,7 @@ export function AuthProvider({ children }) {
       const formData = new URLSearchParams();
       formData.append('username', email.trim().toLowerCase());
       formData.append('password', password);
+      if (recaptchaToken) formData.append('recaptcha_token', recaptchaToken);
 
       const loginResponse = await fetchWithTimeout(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
@@ -317,38 +318,35 @@ export function AuthProvider({ children }) {
     };
   }, [logout, setSession, user]);
 
-  const signUpCustomer = useCallback(async ({ name, email, password }) => {
+  const signUpCustomer = useCallback(async ({ name, email, password, recaptchaToken }) => {
     const normalizedEmail = email.trim().toLowerCase();
 
     if (API_BASE_URL) {
       try {
         const response = await fetchWithTimeout(`${API_BASE_URL}/auth/register`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             full_name: name.trim(),
             email: normalizedEmail,
             phone: null,
             password,
+            recaptcha_token: recaptchaToken || null,
           }),
         });
 
+        const data = await response.json().catch(() => null);
         if (!response.ok) {
-          const errorData = await response.json().catch(() => null);
-          return {
-            success: false,
-            error: errorData?.detail || 'Unable to create your account',
-          };
+          return { success: false, error: data?.detail || 'Unable to create your account' };
         }
 
-        return await login(normalizedEmail, password);
-      } catch (error) {
         return {
-          success: false,
-          error: 'Unable to reach the backend sign-up service',
+          success: true,
+          emailVerificationRequired: data?.email_verification_required !== false,
+          message: data?.message || 'Account created! Please check your email to verify.',
         };
+      } catch (error) {
+        return { success: false, error: 'Unable to reach the backend sign-up service' };
       }
     }
 
@@ -378,13 +376,14 @@ export function AuthProvider({ children }) {
 
     setSession(customerSession);
     return { success: true, user: customerSession };
-  }, [customerUsers, login, setSession]);
+  }, [customerUsers, setSession]);
 
-  const signInCustomer = useCallback(async (email, password) => {
+  const signInCustomer = useCallback(async (email, password, recaptchaToken) => {
     if (API_BASE_URL) {
-      const result = await login(email, password);
+      const result = await login(email, password, recaptchaToken);
       if (!result.success) {
-        return result;
+        const needsVerification = result.error?.toLowerCase().includes('verify your email');
+        return { ...result, needsVerification: needsVerification || false };
       }
       return result;
     }
@@ -576,50 +575,85 @@ export function AuthProvider({ children }) {
 
   const getManagerById = useCallback((managerId) => managers.find((manager) => manager.id === managerId), [managers]);
 
-  const authWithGoogle = useCallback((credential, mode = 'signin') => {
-    const profile = decodeGoogleCredential(credential);
+  const authWithGoogle = useCallback(async (credential, mode = 'signin') => {
+    if (API_BASE_URL) {
+      try {
+        const response = await fetchWithTimeout(`${API_BASE_URL}/auth/google`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id_token: credential, mode }),
+        });
 
+        const data = await response.json().catch(() => null);
+        if (!response.ok) {
+          return { success: false, error: data?.detail || 'Google authentication failed' };
+        }
+
+        const profile = data?.user || null;
+        if (!profile) {
+          return { success: false, error: 'Google authentication failed — no profile returned' };
+        }
+
+        const sessionUser = {
+          id: profile.id,
+          email: profile.email,
+          name: profile.full_name,
+          phone: profile.phone || '',
+          role: normalizeRole(profile.role),
+          isActive: profile.is_active,
+          loginTime: new Date().toISOString(),
+        };
+        setSession(sessionUser);
+        return { success: true, user: sessionUser };
+      } catch (error) {
+        return { success: false, error: 'Unable to reach the backend Google auth service' };
+      }
+    }
+
+    // Fallback: local-only Google simulation (no backend)
+    const profile = decodeGoogleCredential(credential);
     if (!profile?.email) {
       return { success: false, error: 'Google authentication failed' };
     }
-
     const email = profile.email.trim().toLowerCase();
     const name = profile.name || 'Google User';
-    const existing = customerUsers.find((item) => item.email.toLowerCase() === email);
-
-    if (mode === 'signup' && existing && existing.provider !== 'google') {
-      return {
-        success: false,
-        error: 'Email already registered with password login. Use customer sign in.',
-      };
-    }
-
-    let account = existing;
-
+    let account = customerUsers.find((item) => item.email.toLowerCase() === email);
     if (!account) {
-      account = {
-        id: Date.now(),
-        name,
-        email,
-        password: null,
-        provider: 'google',
-        createdAt: new Date().toISOString(),
-      };
+      account = { id: Date.now(), name, email, password: null, provider: 'google', createdAt: new Date().toISOString() };
       setCustomerUsers((prev) => [...prev, account]);
     }
-
-    const customerSession = {
-      id: account.id,
-      name: account.name,
-      email: account.email,
-      role: 'user',
-      provider: 'google',
-      loginTime: new Date().toISOString(),
-    };
-
+    const customerSession = { id: account.id, name: account.name, email: account.email, role: 'user', provider: 'google', loginTime: new Date().toISOString() };
     setSession(customerSession);
     return { success: true, user: customerSession };
   }, [customerUsers, setSession]);
+
+  const verifyEmail = useCallback(async (token) => {
+    if (!API_BASE_URL) return { success: false, error: 'Backend not configured.' };
+    try {
+      const response = await fetchWithTimeout(`${API_BASE_URL}/auth/verify-email?token=${encodeURIComponent(token)}`);
+      const data = await response.json().catch(() => null);
+      if (!response.ok) return { success: false, error: data?.detail || 'Verification failed.' };
+      return { success: true, message: data?.message || 'Email verified.' };
+    } catch {
+      return { success: false, error: 'Unable to reach the verification service.' };
+    }
+  }, []);
+
+  const resendVerification = useCallback(async (email) => {
+    if (!API_BASE_URL) return { success: false, error: 'Backend not configured.' };
+    try {
+      const response = await fetchWithTimeout(`${API_BASE_URL}/auth/resend-verification`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) return { success: false, error: data?.detail || 'Resend failed.' };
+      return { success: true, message: data?.message || 'Verification email sent.' };
+    } catch {
+      return { success: false, error: 'Unable to reach the verification service.' };
+    }
+  }, []);
 
   const isAdmin = useCallback(() => user?.role === 'admin', [user]);
   const isManager = useCallback(() => user?.role === 'manager', [user]);
@@ -636,6 +670,8 @@ export function AuthProvider({ children }) {
       requestPasswordReset,
       resetPassword,
       authWithGoogle,
+      verifyEmail,
+      resendVerification,
       logout,
       isAdmin,
       isManager,
@@ -658,6 +694,8 @@ export function AuthProvider({ children }) {
       requestPasswordReset,
       resetPassword,
       authWithGoogle,
+      verifyEmail,
+      resendVerification,
       logout,
       isAdmin,
       isManager,

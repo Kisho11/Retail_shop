@@ -1,8 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import DOMPurify from 'dompurify';
 import UiIcon from './UiIcon';
-
-const SAFE_URL_PATTERN = /^(https?:|mailto:|tel:)/i;
 import {
   createDefaultProductContent,
   createImageBlock,
@@ -11,6 +9,8 @@ import {
   createTextBlock,
   normalizeProductContent,
 } from '../utils/productContent';
+
+const SAFE_URL_PATTERN = /^(https?:|mailto:|tel:)/i;
 
 const textBlockLabels = {
   paragraph: 'Paragraph',
