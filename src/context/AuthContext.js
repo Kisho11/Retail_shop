@@ -257,6 +257,7 @@ export function AuthProvider({ children }) {
         role: normalizeRole(profile.role),
         isActive: profile.is_active,
         isEmailVerified: profile.is_email_verified ?? false,
+        mustResetPassword: profile.must_reset_password ?? false,
         loginTime: new Date().toISOString(),
       };
 
@@ -302,9 +303,10 @@ export function AuthProvider({ children }) {
             role: normalizeRole(profile.role),
             isActive: profile.is_active,
             isEmailVerified: profile.is_email_verified ?? false,
+            mustResetPassword: profile.must_reset_password ?? false,
             loginTime: user.loginTime || new Date().toISOString(),
           };
-          const hasChanged = ['id', 'email', 'name', 'phone', 'role', 'isActive', 'isEmailVerified'].some(
+          const hasChanged = ['id', 'email', 'name', 'phone', 'role', 'isActive', 'isEmailVerified', 'mustResetPassword'].some(
             (key) => user?.[key] !== nextSession[key]
           );
           if (hasChanged) {
@@ -504,6 +506,56 @@ export function AuthProvider({ children }) {
     setUser((prev) => (prev ? { ...prev, isEmailVerified: true } : prev));
   }, []);
 
+  const activateManagerAccount = useCallback(async (token) => {
+    if (!API_BASE_URL) {
+      return { success: false, error: 'Backend authentication is not configured.' };
+    }
+    try {
+      const response = await fetchWithTimeout(`${API_BASE_URL}/auth/manager-activate?token=${encodeURIComponent(token)}`);
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        return { success: false, error: data?.detail || 'Invalid or expired activation link' };
+      }
+      const profile = data?.user;
+      if (!profile) {
+        return { success: false, error: 'Activation succeeded but profile could not be loaded' };
+      }
+      const sessionUser = {
+        id: profile.id,
+        email: profile.email,
+        name: profile.full_name,
+        phone: profile.phone || '',
+        role: normalizeRole(profile.role),
+        isActive: profile.is_active,
+        isEmailVerified: profile.is_email_verified ?? true,
+        mustResetPassword: profile.must_reset_password ?? true,
+        loginTime: new Date().toISOString(),
+      };
+      setSession(sessionUser);
+      return { success: true, user: sessionUser };
+    } catch (error) {
+      return { success: false, error: 'Unable to reach the server' };
+    }
+  }, [setSession]);
+
+  const setManagerPassword = useCallback(async (newPassword) => {
+    try {
+      const response = await authFetch('/auth/set-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ new_password: newPassword }),
+      });
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        return { success: false, error: data?.detail || 'Failed to set password' };
+      }
+      setUser((prev) => (prev ? { ...prev, mustResetPassword: false } : prev));
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: 'Unable to reach the server' };
+    }
+  }, [authFetch]);
+
   const resendVerificationEmail = useCallback(async () => {
     try {
       const response = await authFetch('/auth/resend-verification', { method: 'POST' });
@@ -567,7 +619,6 @@ export function AuthProvider({ children }) {
         email: managerData.email.trim().toLowerCase(),
         full_name: managerData.name.trim(),
         phone: managerData.phone.trim() || null,
-        password: managerData.password?.trim() || null,
       }),
     });
 
@@ -685,6 +736,8 @@ export function AuthProvider({ children }) {
       resetPassword,
       resendVerificationEmail,
       markEmailVerified,
+      activateManagerAccount,
+      setManagerPassword,
       authWithGoogle,
       logout,
       isAdmin,
@@ -711,6 +764,8 @@ export function AuthProvider({ children }) {
       resetPassword,
       resendVerificationEmail,
       markEmailVerified,
+      activateManagerAccount,
+      setManagerPassword,
       authWithGoogle,
       logout,
       isAdmin,
