@@ -715,6 +715,7 @@ export function ProductProvider({ children }) {
     const imageIsDataUrl = payload.image.startsWith('data:');
     const createResponse = await fetch(`${API_BASE_URL}/categories/`, {
       method: 'POST',
+      credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
         ...createAuthHeaders(),
@@ -737,6 +738,7 @@ export function ProductProvider({ children }) {
 
       const uploadResponse = await fetch(`${API_BASE_URL}/categories/${createdCategory.id}/image`, {
         method: 'POST',
+        credentials: 'include',
         headers: createAuthHeaders(),
         body: formData,
       });
@@ -765,6 +767,7 @@ export function ProductProvider({ children }) {
     if (API_BASE_URL) {
       const deleteResponse = await fetch(`${API_BASE_URL}/categories/${existingCategory.id}`, {
         method: 'DELETE',
+        credentials: 'include',
         headers: {
           ...createAuthHeaders(),
         },
@@ -805,6 +808,7 @@ export function ProductProvider({ children }) {
       const imageIsDataUrl = payload.image.startsWith('data:');
       const updateResponse = await fetch(`${API_BASE_URL}/categories/${existingCategory.id}`, {
         method: 'PUT',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
           ...createAuthHeaders(),
@@ -827,6 +831,7 @@ export function ProductProvider({ children }) {
 
         const uploadResponse = await fetch(`${API_BASE_URL}/categories/${existingCategory.id}/image`, {
           method: 'POST',
+          credentials: 'include',
           headers: createAuthHeaders(),
           body: formData,
         });
@@ -903,6 +908,7 @@ export function ProductProvider({ children }) {
       const imageIsDataUrl = payload.image.startsWith('data:');
       const createResponse = await fetch(`${API_BASE_URL}/categories/`, {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
           ...createAuthHeaders(),
@@ -926,6 +932,7 @@ export function ProductProvider({ children }) {
 
         const uploadResponse = await fetch(`${API_BASE_URL}/categories/${createdSubcategory.id}/image`, {
           method: 'POST',
+          credentials: 'include',
           headers: createAuthHeaders(),
           body: formData,
         });
@@ -981,6 +988,7 @@ export function ProductProvider({ children }) {
       const imageIsDataUrl = payload.image.startsWith('data:');
       const updateResponse = await fetch(`${API_BASE_URL}/categories/${existingSubcategory.id}`, {
         method: 'PUT',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
           ...createAuthHeaders(),
@@ -1004,6 +1012,7 @@ export function ProductProvider({ children }) {
 
         const uploadResponse = await fetch(`${API_BASE_URL}/categories/${existingSubcategory.id}/image`, {
           method: 'POST',
+          credentials: 'include',
           headers: createAuthHeaders(),
           body: formData,
         });
@@ -1058,6 +1067,7 @@ export function ProductProvider({ children }) {
     if (API_BASE_URL) {
       const deleteResponse = await fetch(`${API_BASE_URL}/categories/${existingSubcategory.id}`, {
         method: 'DELETE',
+        credentials: 'include',
         headers: {
           ...createAuthHeaders(),
         },
