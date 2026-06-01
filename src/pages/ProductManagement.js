@@ -493,7 +493,7 @@ function ProductManagement() {
         const attrs = (formData.imageVariantAttrs || [])[idx] || {};
         const assignedAttrs = Object.fromEntries(Object.entries(attrs).filter(([, v]) => v));
         if (!trimmed || Object.keys(assignedAttrs).length === 0) return null;
-        return { attributes: assignedAttrs, imageUrl: trimmed };
+        return { attributes: assignedAttrs, imageIndex: idx, imageUrl: trimmed };
       })
       .filter(Boolean);
 
@@ -578,7 +578,12 @@ function ProductManagement() {
           imageVariantAttrs: (() => {
             const base = Array(safeUrls.length).fill(null).map(() => ({}));
             (product.variantImages || []).forEach((vi) => {
-              const idx = safeUrls.indexOf(vi.imageUrl);
+              let idx = -1;
+              if (typeof vi.imageIndex === 'number' && vi.imageIndex < safeUrls.length) {
+                idx = vi.imageIndex;
+              } else {
+                idx = safeUrls.indexOf(vi.imageUrl);
+              }
               if (idx !== -1 && vi.attributes && typeof vi.attributes === 'object') {
                 base[idx] = { ...vi.attributes };
               }
